@@ -618,12 +618,15 @@ export const exportJsonToPdf = (payload: ExportPayload): JsPDFInstance => {
 
   const documentTitle = title?.trim() ?? 'Grid Export';
   const documentSubtitle = subtitle?.trim();
-  const preparedLogo = sanitizeBase64(logoBase64) ?? sanitizeBase64(defaultLogoBase64);
+  // Always use the logo from logo.ts
+  const preparedLogo = sanitizeBase64(defaultLogoBase64);
 
   const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' }) as JsPDFWithInternal;
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = { top: 80, right: 36, bottom: 50, left: 36 };
+  // Increased top margin to 100 to prevent date from overlapping with table
+  // Reduced side margins from 36 to 30 to give more space for table content
+  const margin = { top: 100, right: 30, bottom: 50, left: 30 };
   const availableWidth = pageWidth - margin.left - margin.right;
 
   const { headers, hasGroupHeaders } = generateGroupHeaders(columnDefs, printableColumns);
@@ -658,15 +661,16 @@ export const exportJsonToPdf = (payload: ExportPayload): JsPDFInstance => {
   const didDrawPage = (data: CellHookData): void => {
     const pageNumber: number = doc.internal.getNumberOfPages();
 
-    // Header background
+    // Header background - extended to accommodate larger margin
     doc.setFillColor(255, 255, 255);
-    doc.rect(0, 0, pageWidth, margin.top - 20, 'F');
+    doc.rect(0, 0, pageWidth, margin.top - 10, 'F');
 
+    // Always draw the logo from logo.ts
     if (preparedLogo) {
       const logoWidth = 120;
       const logoHeight = logoWidth * (4972 / 16000);
       const logoX = pageWidth - logoWidth - margin.right;
-      const logoY = 24;
+      const logoY = 20;
       try {
         doc.addImage(preparedLogo, 'PNG', logoX, logoY, logoWidth, logoHeight);
       } catch (error) {
@@ -677,17 +681,18 @@ export const exportJsonToPdf = (payload: ExportPayload): JsPDFInstance => {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(16);
     doc.setTextColor(0, 0, 0);
-    doc.text(documentTitle, margin.left, 36);
+    doc.text(documentTitle, margin.left, 32);
 
     if (documentSubtitle) {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(11);
-      doc.text(documentSubtitle, margin.left, 54);
+      doc.text(documentSubtitle, margin.left, 50);
     }
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    doc.text(`Fecha: ${currentDate}`, margin.left, documentSubtitle ? 70 : 54);
+    // Positioned date further down to avoid overlap with table (at 68 or 84)
+    doc.text(`Fecha: ${currentDate}`, margin.left, documentSubtitle ? 68 : 50);
 
     // Footer
     doc.setDrawColor(200, 200, 200);
@@ -706,15 +711,16 @@ export const exportJsonToPdf = (payload: ExportPayload): JsPDFInstance => {
   autoTable(doc, {
     head: headers,
     body,
-    startY: hasGroupHeaders ? margin.top : margin.top - 16,
+    // Ensure table starts below the header with proper spacing
+    startY: margin.top,
     margin,
     styles: {
       font: 'helvetica',
-      fontSize: 8,
-      cellPadding: 5, // Increased padding from 4 to 5 for better spacing
+      fontSize: 7, // Reduced from 8 to 7 to fit more content
+      cellPadding: 3, // Reduced padding to fit more content
       overflow: 'linebreak',
       cellWidth: 'wrap', // Ensure cells wrap content properly
-      minCellHeight: 15, // Minimum cell height to prevent vertical text
+      minCellHeight: 12, // Reduced minimum height to fit more rows
       valign: 'middle', // Vertical alignment
       lineWidth: 0.1,
       lineColor: [200, 200, 200]
@@ -724,12 +730,15 @@ export const exportJsonToPdf = (payload: ExportPayload): JsPDFInstance => {
       textColor: [255, 255, 255],
       fontStyle: 'bold',
       halign: 'center',
-      minCellHeight: 20, // Minimum height for header cells
+      fontSize: 8, // Keep header font slightly larger
+      minCellHeight: 18, // Minimum height for header cells
       valign: 'middle'
     },
     columnStyles,
     showHead: 'everyPage',
-    tableWidth: 'auto', // Auto-adjust table width
+    tableWidth: 'wrap', // Changed from 'auto' to 'wrap' for better fitting
+    horizontalPageBreak: true, // Enable horizontal page breaks if needed
+    horizontalPageBreakRepeat: 0, // Repeat first column on horizontal page break
     willDrawCell: undefined,
     didParseCell: (data: CellHookData) => applyRowStyling(data, metadata),
     didDrawPage
