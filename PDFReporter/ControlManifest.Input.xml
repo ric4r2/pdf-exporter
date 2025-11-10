@@ -18,7 +18,28 @@
       -->
     </external-service-usage>
     <!-- property node identifies a specific, configurable piece of data that the control expects from CDS -->
-    <property name="sampleProperty" display-name-key="Property_Display_Key" description-key="Property_Desc_Key" of-type="SingleLine.Text" usage="bound" required="true" />
+  <!-- JSON payload that contains the rows, column definitions and optional metadata used for the PDF rendering -->
+  <property name="tableData" display-name-key="Table Data (JSON)" description-key="JSON string with rows, columns and metadata" of-type="Multiple" usage="bound" required="false" />
+
+  <!-- Optional metadata overrides for the PDF document -->
+  <property name="pdfTitle" display-name-key="PDF Title" description-key="Title rendered in the PDF header" of-type="SingleLine.Text" usage="input" required="false" default-value="Grid Export" />
+  <property name="pdfSubtitle" display-name-key="PDF Subtitle" description-key="Subtitle rendered below the title" of-type="SingleLine.Text" usage="input" required="false" />
+  <property name="pdfLogo" display-name-key="PDF Logo (Base64)" description-key="Optional base64 logo that replaces the default brand" of-type="Multiple" usage="input" required="false" />
+  <property name="pdfFootnote" display-name-key="PDF Footnote" description-key="Optional note rendered below the table" of-type="Multiple" usage="input" required="false" />
+
+  <!-- Button customization -->
+  <property name="buttonText" display-name-key="Button Text" description-key="Text displayed in the export button" of-type="SingleLine.Text" usage="input" required="false" default-value="Export PDF" />
+  <property name="buttonWidth" display-name-key="Button Width" description-key="Width of the button in pixels" of-type="Whole.None" usage="input" required="false" default-value="140" />
+  <property name="buttonHeight" display-name-key="Button Height" description-key="Height of the button in pixels" of-type="Whole.None" usage="input" required="false" default-value="44" />
+  <property name="buttonColor" display-name-key="Button Color" description-key="Background color of the button" of-type="SingleLine.Text" usage="input" required="false" default-value="#712d3d" />
+  <property name="buttonTextColor" display-name-key="Button Text Color" description-key="Text color of the button" of-type="SingleLine.Text" usage="input" required="false" default-value="#ffffff" />
+  <property name="buttonFontSize" display-name-key="Button Font Size" description-key="Font size in pixels of the button text" of-type="Whole.None" usage="input" required="false" default-value="14" />
+  <property name="buttonBorderRadius" display-name-key="Button Border Radius" description-key="Border radius in pixels of the button" of-type="Whole.None" usage="input" required="false" default-value="6" />
+
+  <!-- Output behaviour -->
+  <property name="pdfFileName" display-name-key="PDF File Name" description-key="Name of the generated PDF file" of-type="SingleLine.Text" usage="input" required="false" default-value="grid-export.pdf" />
+  <property name="openInNewTab" display-name-key="Open In New Tab" description-key="Open the rendered PDF in a new browser tab" of-type="TwoOptions" usage="input" required="false" default-value="true" />
+  <property name="autoDownload" display-name-key="Download Automatically" description-key="Trigger an automatic download after the PDF is generated" of-type="TwoOptions" usage="input" required="false" default-value="true" />
     <!--
       Property node's of-type attribute can be of-type-group attribute.
       Example:

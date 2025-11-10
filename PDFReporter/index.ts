@@ -1,5 +1,5 @@
 import { IInputs, IOutputs } from "./generated/ManifestTypes";
-import { HelloWorld, IHelloWorldProps } from "./HelloWorld";
+import { HelloWorld, type IPdfExportProps } from "./HelloWorld";
 import * as React from "react";
 
 export class PDFReporter implements ComponentFramework.ReactControl<IInputs, IOutputs> {
@@ -33,10 +33,25 @@ export class PDFReporter implements ComponentFramework.ReactControl<IInputs, IOu
      * @returns ReactElement root react element for the control
      */
     public updateView(context: ComponentFramework.Context<IInputs>): React.ReactElement {
-        const props: IHelloWorldProps = { name: 'Power Apps' };
-        return React.createElement(
-            HelloWorld, props
-        );
+        const props: IPdfExportProps = {
+            tableData: context.parameters.tableData?.raw ?? undefined,
+            buttonText: context.parameters.buttonText?.raw ?? undefined,
+            buttonWidth: context.parameters.buttonWidth?.raw ?? undefined,
+            buttonHeight: context.parameters.buttonHeight?.raw ?? undefined,
+            buttonColor: context.parameters.buttonColor?.raw ?? undefined,
+            buttonTextColor: context.parameters.buttonTextColor?.raw ?? undefined,
+            buttonFontSize: context.parameters.buttonFontSize?.raw ?? undefined,
+            buttonBorderRadius: context.parameters.buttonBorderRadius?.raw ?? undefined,
+            pdfFileName: context.parameters.pdfFileName?.raw ?? undefined,
+            pdfTitle: context.parameters.pdfTitle?.raw ?? undefined,
+            pdfSubtitle: context.parameters.pdfSubtitle?.raw ?? undefined,
+            pdfLogo: context.parameters.pdfLogo?.raw ?? undefined,
+            pdfFootnote: context.parameters.pdfFootnote?.raw ?? undefined,
+            openInNewTab: context.parameters.openInNewTab?.raw ?? true,
+            autoDownload: context.parameters.autoDownload?.raw ?? true
+        };
+
+        return React.createElement(HelloWorld, props);
     }
 
     /**
