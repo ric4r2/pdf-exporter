@@ -1,5 +1,5 @@
 import { IInputs, IOutputs } from "./generated/ManifestTypes";
-import { HelloWorld, type IPdfExportProps } from "./HelloWorld";
+import { PdfExportButton, type IPdfExportButtonProps } from "./PdfExportButton";
 import * as React from "react";
 
 export class PDFReporter implements ComponentFramework.ReactControl<IInputs, IOutputs> {
@@ -33,7 +33,7 @@ export class PDFReporter implements ComponentFramework.ReactControl<IInputs, IOu
      * @returns ReactElement root react element for the control
      */
     public updateView(context: ComponentFramework.Context<IInputs>): React.ReactElement {
-        const props: IPdfExportProps = {
+        const props: IPdfExportButtonProps = {
             tableData: context.parameters.tableData?.raw ?? undefined,
             buttonText: context.parameters.buttonText?.raw ?? undefined,
             buttonWidth: context.parameters.buttonWidth?.raw ?? undefined,
@@ -51,7 +51,7 @@ export class PDFReporter implements ComponentFramework.ReactControl<IInputs, IOu
             autoDownload: context.parameters.autoDownload?.raw ?? true
         };
 
-        return React.createElement(HelloWorld, props);
+        return React.createElement(PdfExportButton, props);
     }
 
     /**

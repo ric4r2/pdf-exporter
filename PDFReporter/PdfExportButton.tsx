@@ -2,7 +2,7 @@ import * as React from 'react';
 import type { ColumnConfig, ColumnDefinition, ExportPayload } from './pdfExport';
 import { exportJsonToPdf } from './pdfExport';
 
-export interface IPdfExportProps {
+export interface IPdfExportButtonProps {
   tableData?: string;
   buttonText?: string;
   buttonWidth?: number;
@@ -113,7 +113,7 @@ const parseTableData = (tableData: string): ExportPayload => {
   throw new Error('Formato de JSON no soportado.');
 };
 
-export const HelloWorld: React.FC<IPdfExportProps> = (props) => {
+export const PdfExportButton: React.FC<IPdfExportButtonProps> = (props) => {
   const {
     tableData,
     buttonText = 'Export PDF',
