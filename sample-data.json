@@ -1,0 +1,143 @@
+{
+  "title": "Sales Report 2025",
+  "subtitle": "Quarterly Performance Review",
+  "rows": [
+    {
+      "nombreEmpleado": "Juan Pérez",
+      "edad": 35,
+      "salario": 45000,
+      "fechaIngreso": "2020-03-15",
+      "departamento": "Ventas",
+      "porcentajeAvance": 85
+    },
+    {
+      "nombreEmpleado": "María González",
+      "edad": 28,
+      "salario": 38000,
+      "fechaIngreso": "2021-06-20",
+      "departamento": "Marketing",
+      "porcentajeAvance": 92
+    },
+    {
+      "nombreEmpleado": "Carlos Rodríguez",
+      "edad": 42,
+      "salario": 52000,
+      "fechaIngreso": "2019-01-10",
+      "departamento": "TI",
+      "porcentajeAvance": 78
+    },
+    {
+      "nombreEmpleado": "Ana Martínez",
+      "edad": 31,
+      "salario": 41000,
+      "fechaIngreso": "2020-09-05",
+      "departamento": "RH",
+      "porcentajeAvance": 88
+    }
+  ],
+  "summaryRows": [
+    {
+      "__rowType": "total",
+      "nombreEmpleado": "TOTAL",
+      "edad": "",
+      "salario": 176000,
+      "fechaIngreso": "",
+      "departamento": "",
+      "porcentajeAvance": 85.75
+    }
+  ],
+  "columnConfigs": [
+    {
+      "NombreColumna": "nombreEmpleado",
+      "NombreMostrar": "Nombre Empleado",
+      "TipoColumna": "String",
+      "PropiedadesColumna": {
+        "EsExportable": true,
+        "EstaOculta": false
+      },
+      "WidthDefault": "200",
+      "Print": {
+        "Printable": true,
+        "WidthPercentage": "25"
+      }
+    },
+    {
+      "NombreColumna": "edad",
+      "NombreMostrar": "Edad",
+      "TipoColumna": "number",
+      "PropiedadesColumna": {
+        "EsExportable": true,
+        "EstaOculta": false,
+        "Formato": "numero",
+        "DecimalesdeRedondeo": 0
+      },
+      "WidthDefault": "100",
+      "Print": {
+        "Printable": true,
+        "WidthPercentage": "10"
+      }
+    },
+    {
+      "NombreColumna": "salario",
+      "NombreMostrar": "Salario",
+      "TipoColumna": "number",
+      "PropiedadesColumna": {
+        "EsExportable": true,
+        "EstaOculta": false,
+        "Formato": "Dinero",
+        "DecimalesdeRedondeo": 2
+      },
+      "WidthDefault": "150",
+      "Print": {
+        "Printable": true,
+        "WidthPercentage": "15"
+      }
+    },
+    {
+      "NombreColumna": "fechaIngreso",
+      "NombreMostrar": "Fecha Ingreso",
+      "TipoColumna": "Fecha",
+      "PropiedadesColumna": {
+        "EsExportable": true,
+        "EstaOculta": false,
+        "Formato": "FechaCorta"
+      },
+      "WidthDefault": "150",
+      "Print": {
+        "Printable": true,
+        "WidthPercentage": "15"
+      }
+    },
+    {
+      "NombreColumna": "departamento",
+      "NombreMostrar": "Departamento",
+      "TipoColumna": "String",
+      "PropiedadesColumna": {
+        "EsExportable": true,
+        "EstaOculta": false
+      },
+      "WidthDefault": "150",
+      "Print": {
+        "Printable": true,
+        "WidthPercentage": "20"
+      }
+    },
+    {
+      "NombreColumna": "porcentajeAvance",
+      "NombreMostrar": "% Avance",
+      "TipoColumna": "number",
+      "PropiedadesColumna": {
+        "EsExportable": true,
+        "EstaOculta": false,
+        "Formato": "PorcentajeSimple",
+        "DecimalesdeRedondeo": 2
+      },
+      "WidthDefault": "120",
+      "Print": {
+        "Printable": true,
+        "WidthPercentage": "15"
+      }
+    }
+  ],
+  "footnote": "Este reporte fue generado automáticamente. Los datos son confidenciales."
+}

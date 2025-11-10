@@ -41,14 +41,14 @@ export interface ColumnDefinition {
 export type RowType = 'data' | 'groupHeader' | 'groupTotal' | 'total' | 'subtotal';
 
 export interface ExportPayload {
-  rows: Array<Record<string, unknown>>;
+  rows: Record<string, unknown>[];
   columnConfigs?: ColumnConfig[];
   columnDefs?: ColumnDefinition[];
   title?: string;
   subtitle?: string;
   logoBase64?: string | null;
   footnote?: string;
-  summaryRows?: Array<Record<string, unknown>>;
+  summaryRows?: Record<string, unknown>[];
 }
 
 interface PrintableColumn {
@@ -58,8 +58,25 @@ interface PrintableColumn {
   widthWeight: number;
 }
 
+interface ParsedArray {
+  def: ColumnDefinition;
+  parents: string[];
+}
+
 interface RowMetadata {
   type: RowType;
+}
+
+interface InternalDoc {
+  pageSize: {
+    getWidth: () => number;
+    getHeight: () => number;
+  };
+  getNumberOfPages: () => number;
+}
+
+interface JsPDFWithInternal extends JsPDFInstance {
+  internal: InternalDoc;
 }
 
 const TOTAL_ROW_COLOR: [number, number, number] = [230, 230, 230];
@@ -109,7 +126,7 @@ const getFlatColumns = (columnDefs: ColumnDefinition[]): ColumnDefinition[] => {
   return flat;
 };
 
-const inferColumnType = (rows: Array<Record<string, unknown>>, key: string): string => {
+const inferColumnType = (rows: Record<string, unknown>[], key: string): string => {
   for (const row of rows) {
     const value = row[key];
     if (value === null || value === undefined) {
@@ -136,7 +153,7 @@ const inferColumnType = (rows: Array<Record<string, unknown>>, key: string): str
   return 'String';
 };
 
-const deriveColumnConfigs = (rows: Array<Record<string, unknown>>): ColumnConfig[] => {
+const deriveColumnConfigs = (rows: Record<string, unknown>[]): ColumnConfig[] => {
   if (!rows || rows.length === 0) {
     return [];
   }
@@ -299,7 +316,7 @@ const generateGroupHeaders = (
       return cached;
     }
 
-    const stack: Array<{ def: ColumnDefinition; parents: string[] }> = defs.map(def => ({
+    const stack: ParsedArray[] = defs.map(def => ({
       def,
       parents: []
     }));
@@ -386,6 +403,14 @@ const formatValue = (value: unknown, columnConfig?: ColumnConfig): string => {
     return '';
   }
 
+  // Helper to safely stringify any value
+  const safeStringify = (val: unknown): string => {
+    if (typeof val === 'object' && val !== null) {
+      return JSON.stringify(val);
+    }
+    return String(val);
+  };
+
   const config = columnConfig?.PropiedadesColumna;
   const formato = config?.Formato;
   const decimales = config?.DecimalesdeRedondeo ?? 2;
@@ -395,7 +420,7 @@ const formatValue = (value: unknown, columnConfig?: ColumnConfig): string => {
       case 'number': {
         const numericValue = typeof value === 'number' ? value : Number(value);
         if (!Number.isFinite(numericValue)) {
-          return value.toString();
+          return safeStringify(value);
         }
         switch (formato) {
           case 'Dinero':
@@ -447,7 +472,7 @@ const formatValue = (value: unknown, columnConfig?: ColumnConfig): string => {
       case 'Fecha': {
         const dateValue = value instanceof Date ? value : new Date(value as string);
         if (Number.isNaN(dateValue.getTime())) {
-          return value.toString();
+          return safeStringify(value);
         }
         switch (formato) {
           case 'FechaCorta':
@@ -479,11 +504,11 @@ const formatValue = (value: unknown, columnConfig?: ColumnConfig): string => {
         return value ? 'Sí' : 'No';
       case 'String':
       default:
-        return value.toString();
+        return safeStringify(value);
     }
   } catch (error) {
     console.error('Error formatting value for PDF export:', error);
-    return value.toString();
+    return safeStringify(value);
   }
 };
 
@@ -492,14 +517,14 @@ const parseRowType = (row: Record<string, unknown>): RowType => {
   if (!rawType) {
     return 'data';
   }
-  const normalized = rawType.toString().trim().toLowerCase();
+  const normalized = typeof rawType === 'string' ? rawType.trim().toLowerCase() : String(rawType).trim().toLowerCase();
   return DATA_ROW_TYPES[normalized] ?? 'data';
 };
 
 const buildBodyRows = (
   printableColumns: PrintableColumn[],
-  rows: Array<Record<string, unknown>>,
-  summaryRows: Array<Record<string, unknown>> | undefined
+  rows: Record<string, unknown>[],
+  summaryRows: Record<string, unknown>[] | undefined
 ): { body: RowInput[]; metadata: RowMetadata[] } => {
   const metadata: RowMetadata[] = [];
   const body: RowInput[] = [];
@@ -583,11 +608,11 @@ export const exportJsonToPdf = (payload: ExportPayload): JsPDFInstance => {
     throw new Error('No hay columnas visibles para exportar. Ajusta la configuración de impresión.');
   }
 
-  const documentTitle = title?.trim() || 'Grid Export';
+  const documentTitle = title?.trim() ?? 'Grid Export';
   const documentSubtitle = subtitle?.trim();
   const preparedLogo = sanitizeBase64(logoBase64) ?? sanitizeBase64(defaultLogoBase64);
 
-  const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' });
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' }) as JsPDFWithInternal;
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = { top: 80, right: 36, bottom: 50, left: 36 };
@@ -622,7 +647,7 @@ export const exportJsonToPdf = (payload: ExportPayload): JsPDFInstance => {
   const currentDate = new Date().toLocaleDateString('es-MX');
 
   const didDrawPage = (data: CellHookData): void => {
-    const pageNumber = doc.internal.getNumberOfPages();
+    const pageNumber: number = doc.internal.getNumberOfPages();
 
     // Header background
     doc.setFillColor(255, 255, 255);
@@ -662,7 +687,7 @@ export const exportJsonToPdf = (payload: ExportPayload): JsPDFInstance => {
     doc.setFontSize(9);
     doc.setTextColor(100, 100, 100);
     doc.text(
-      `Página ${data.pageNumber} de ${TOTAL_PAGES_PLACEHOLDER}`,
+      `Página ${String(data.pageNumber)} de ${TOTAL_PAGES_PLACEHOLDER}`,
       pageWidth / 2,
       pageHeight - margin.bottom + 32,
       { align: 'center' }

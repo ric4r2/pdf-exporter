@@ -73,7 +73,7 @@ const coerceColumnDefs = (value: unknown): ColumnDefinition[] | undefined => {
   return results.length > 0 ? results : undefined;
 };
 
-const coerceRows = (value: unknown): Array<Record<string, unknown>> => {
+const coerceRows = (value: unknown): Record<string, unknown>[] => {
   if (!Array.isArray(value)) {
     return [];
   }
@@ -165,10 +165,10 @@ export const HelloWorld: React.FC<IPdfExportProps> = (props) => {
 
       const doc = exportJsonToPdf(payload);
       const safeTitle = (payload.title ?? 'grid-export').replace(/\s+/g, '-').toLowerCase();
-      const fileName = pdfFileName?.trim() || `${safeTitle}.pdf`;
+      const fileName = pdfFileName?.trim() ?? `${safeTitle}.pdf`;
 
       if (openInNewTab) {
-        const blobUrl = doc.output('bloburl');
+        const blobUrl = doc.output('bloburl') as string;
         window.open(blobUrl, '_blank');
       }
 
