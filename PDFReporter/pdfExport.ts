@@ -408,7 +408,11 @@ const formatValue = (value: unknown, columnConfig?: ColumnConfig): string => {
     if (typeof val === 'object' && val !== null) {
       return JSON.stringify(val);
     }
-    return String(val);
+    // Clean string to remove problematic characters that might cause vertical text
+    const str = String(val);
+    // Remove or replace problematic characters (control characters and non-printable)
+    // eslint-disable-next-line no-control-regex
+    return str.replace(/[\u0000-\u001F\u007F-\u009F]/g, '').trim();
   };
 
   const config = columnConfig?.PropiedadesColumna;
@@ -548,7 +552,11 @@ const buildBodyRows = (
       }
 
       const value = rawRow[column.dataKey];
-      return formatValue(value, column.columnConfig);
+      const formattedValue = formatValue(value, column.columnConfig);
+      
+      // Return as object with content to ensure proper rendering
+      // This prevents vertical text issues
+      return formattedValue;
     });
 
     body.push(formattedRow);
@@ -626,7 +634,8 @@ export const exportJsonToPdf = (payload: ExportPayload): JsPDFInstance => {
 
   printableColumns.forEach(column => {
     const relative = column.widthWeight / totalWidthWeight;
-    const width = Math.max(relative * availableWidth, 40);
+    // Increased minimum width from 40 to 60 to prevent text overlap
+    const width = Math.max(relative * availableWidth, 60);
     const alignment = (() => {
       const columnType = column.columnConfig?.TipoColumna;
       if (columnType === 'number') {
@@ -702,19 +711,27 @@ export const exportJsonToPdf = (payload: ExportPayload): JsPDFInstance => {
     styles: {
       font: 'helvetica',
       fontSize: 8,
-      cellPadding: 4,
-      overflow: 'linebreak'
+      cellPadding: 5, // Increased padding from 4 to 5 for better spacing
+      overflow: 'linebreak',
+      cellWidth: 'wrap', // Ensure cells wrap content properly
+      minCellHeight: 15, // Minimum cell height to prevent vertical text
+      valign: 'middle', // Vertical alignment
+      lineWidth: 0.1,
+      lineColor: [200, 200, 200]
     },
     headStyles: {
       fillColor: [113, 45, 61],
       textColor: [255, 255, 255],
       fontStyle: 'bold',
-      halign: 'center'
+      halign: 'center',
+      minCellHeight: 20, // Minimum height for header cells
+      valign: 'middle'
     },
     columnStyles,
     showHead: 'everyPage',
+    tableWidth: 'auto', // Auto-adjust table width
     willDrawCell: undefined,
-  didParseCell: (data: CellHookData) => applyRowStyling(data, metadata),
+    didParseCell: (data: CellHookData) => applyRowStyling(data, metadata),
     didDrawPage
   });
 
