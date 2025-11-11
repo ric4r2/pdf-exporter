@@ -1,0 +1,10 @@
+[
+  {
+    "headerName": "Información Personal",
+    "children": ["nombreEmpleado", "edad"]
+  },
+  {
+    "headerName": "Información Laboral",
+    "children": ["departamento", "salario", "fechaIngreso"]
+  }
+]

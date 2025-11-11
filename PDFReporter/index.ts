@@ -38,19 +38,36 @@ export class PDFReporter implements ComponentFramework.ReactControl<IInputs, IOu
             : { width: undefined, height: undefined };
 
         const props: IPdfExportButtonProps = {
-            tableData: context.parameters.tableData?.raw ?? undefined,
-            buttonText: context.parameters.buttonText?.raw ?? undefined,
-            buttonColor: context.parameters.buttonColor?.raw ?? undefined,
-            buttonTextColor: context.parameters.buttonTextColor?.raw ?? undefined,
-            buttonFontSize: context.parameters.buttonFontSize?.raw ?? undefined,
-            buttonBorderRadius: context.parameters.buttonBorderRadius?.raw ?? undefined,
+            // PDF File Related
             pdfFileName: context.parameters.pdfFileName?.raw ?? undefined,
-            pdfTitle: context.parameters.pdfTitle?.raw ?? undefined,
-            pdfSubtitle: context.parameters.pdfSubtitle?.raw ?? undefined,
-            pdfLogo: context.parameters.pdfLogo?.raw ?? undefined,
-            pdfFootnote: context.parameters.pdfFootnote?.raw ?? undefined,
-            openInNewTab: context.parameters.openInNewTab?.raw ?? true,
-            autoDownload: context.parameters.autoDownload?.raw ?? true
+            pdfExportTitle: context.parameters.pdfExportTitle?.raw ?? undefined,
+            pdfExportSubtitle: context.parameters.pdfExportSubtitle?.raw ?? undefined,
+            
+            // Data Sources (ag-grid format)
+            apiUrl: context.parameters.apiUrl?.raw ?? undefined,
+            columnConfig: context.parameters.columnConfig?.raw ?? undefined,
+            columnGroups: context.parameters.columnGroups?.raw ?? undefined,
+            
+            // PDF Table Styling
+            headerFill: context.parameters.headerFill?.raw ?? undefined,
+            headerColor: context.parameters.headerColor?.raw ?? undefined,
+            fontSize: context.parameters.fontSize?.raw ?? undefined,
+            
+            // Button Styling (Normal State)
+            fill: context.parameters.fill?.raw ?? undefined,
+            color: context.parameters.color?.raw ?? undefined,
+            borderColor: context.parameters.borderColor?.raw ?? undefined,
+            borderThickness: context.parameters.borderThickness?.raw ?? undefined,
+            
+            // Button Styling (Hover State)
+            hoverFill: context.parameters.hoverFill?.raw ?? undefined,
+            hoverColor: context.parameters.hoverColor?.raw ?? undefined,
+            hoverBorderColor: context.parameters.hoverBorderColor?.raw ?? undefined,
+            
+            // Button Styling (Pressed State)
+            pressedFill: context.parameters.pressedFill?.raw ?? undefined,
+            pressedColor: context.parameters.pressedColor?.raw ?? undefined,
+            pressedBorderColor: context.parameters.pressedBorderColor?.raw ?? undefined
         };
 
         return React.createElement(

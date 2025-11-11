@@ -40,15 +40,23 @@ export interface ColumnDefinition {
 
 export type RowType = 'data' | 'groupHeader' | 'groupTotal' | 'total' | 'subtotal';
 
-export interface ExportPayload {
-  rows: Record<string, unknown>[];
-  columnConfigs?: ColumnConfig[];
-  columnDefs?: ColumnDefinition[];
-  title?: string;
-  subtitle?: string;
-  logoBase64?: string | null;
-  footnote?: string;
-  summaryRows?: Record<string, unknown>[];
+export interface ColumnGroup {
+  headerName: string;
+  children: string[];
+  marryChildren?: boolean;
+  openByDefault?: boolean;
+}
+
+export interface ExportOptions {
+  apiUrl: Record<string, unknown>[]; // Array of row data
+  columnConfig: ColumnConfig[]; // Column configuration
+  columnGroups?: ColumnGroup[]; // Optional grouped columns
+  pdfFileName?: string;
+  pdfExportTitle?: string;
+  pdfExportSubtitle?: string;
+  headerFill?: string; // hex color
+  headerColor?: string; // hex color
+  fontSize?: number;
 }
 
 interface PrintableColumn {
@@ -95,6 +103,15 @@ const DATA_ROW_TYPES: Record<string, RowType> = {
   subtotal: 'groupTotal',
   total: 'total',
   grandtotal: 'total'
+};
+
+const hexToRgb = (hex: string): [number, number, number] => {
+  const cleaned = hex.replace(/^#/, '');
+  const bigint = parseInt(cleaned, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return [r, g, b];
 };
 
 const sanitizeBase64 = (value: string | null | undefined): string | null => {
@@ -592,33 +609,43 @@ const applyRowStyling = (
   }
 };
 
-export const exportJsonToPdf = (payload: ExportPayload): JsPDFInstance => {
+export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
   const {
-    rows,
-    columnConfigs: configInput,
-    columnDefs,
-    title,
-    subtitle,
-    logoBase64,
-    footnote,
-    summaryRows
-  } = payload;
+    apiUrl,
+    columnConfig,
+    columnGroups,
+    pdfExportTitle,
+    pdfExportSubtitle,
+    headerFill,
+    headerColor,
+    fontSize
+  } = options;
 
-  const columnConfigs = (configInput && configInput.length > 0)
-    ? configInput
-    : deriveColumnConfigs(rows);
-
-  if (columnConfigs.length === 0) {
-    throw new Error('No se encontraron columnas para exportar. Verifique la configuración o los datos proporcionados.');
+  // Validate required inputs
+  if (!apiUrl || apiUrl.length === 0) {
+    throw new Error('No se proporcionaron datos (apiUrl). Verifique la entrada.');
   }
 
-  const printableColumns = buildPrintableColumns(columnConfigs, columnDefs);
+  if (!columnConfig || columnConfig.length === 0) {
+    throw new Error('No se proporcionó la configuración de columnas (columnConfig). Verifique la entrada.');
+  }
+
+  // Convert columnGroups to columnDefs format if provided
+  const columnDefs: ColumnDefinition[] | undefined = columnGroups?.map(group => ({
+    headerName: group.headerName,
+    children: group.children.map(childName => ({
+      field: childName,
+      headerName: childName
+    }))
+  }));
+
+  const printableColumns = buildPrintableColumns(columnConfig, columnDefs);
   if (printableColumns.length === 0) {
     throw new Error('No hay columnas visibles para exportar. Ajusta la configuración de impresión.');
   }
 
-  const documentTitle = title?.trim() ?? 'Grid Export';
-  const documentSubtitle = subtitle?.trim();
+  const documentTitle = pdfExportTitle?.trim() ?? 'Grid Export';
+  const documentSubtitle = pdfExportSubtitle?.trim();
   // Always use the logo from logo.ts
   const preparedLogo = sanitizeBase64(defaultLogoBase64);
 
@@ -631,7 +658,7 @@ export const exportJsonToPdf = (payload: ExportPayload): JsPDFInstance => {
   const availableWidth = pageWidth - margin.left - margin.right;
 
   const { headers, hasGroupHeaders } = generateGroupHeaders(columnDefs, printableColumns);
-  const { body, metadata } = buildBodyRows(printableColumns, rows, summaryRows);
+  const { body, metadata } = buildBodyRows(printableColumns, apiUrl, undefined);
 
   const totalWidthWeight = printableColumns.reduce((sum, column) => sum + column.widthWeight, 0);
   const columnStyles: Record<string, { cellWidth: number; halign?: 'left' | 'center' | 'right'; overflow?: 'linebreak' }> = {};
@@ -709,6 +736,11 @@ export const exportJsonToPdf = (payload: ExportPayload): JsPDFInstance => {
     );
   };
 
+  // Parse custom colors (defaults if not provided)
+  const headerFillRGB = hexToRgb(headerFill ?? '#712d3d');
+  const headerColorRGB = hexToRgb(headerColor ?? '#ffffff');
+  const tableFontSize = fontSize ?? 10;
+
   autoTable(doc, {
     head: headers,
     body,
@@ -717,7 +749,7 @@ export const exportJsonToPdf = (payload: ExportPayload): JsPDFInstance => {
     margin, // Use equal margins on both sides
     styles: {
       font: 'helvetica',
-      fontSize: 7, // Reduced from 8 to 7 to fit more content
+      fontSize: tableFontSize - 2, // Body font slightly smaller than specified
       cellPadding: 4, // Padding for better readability
       overflow: 'linebreak', // Wrap text instead of cutting
       minCellHeight: 15, // Minimum height to accommodate wrapped text
@@ -727,11 +759,11 @@ export const exportJsonToPdf = (payload: ExportPayload): JsPDFInstance => {
       halign: 'left'
     },
     headStyles: {
-      fillColor: [113, 45, 61],
-      textColor: [255, 255, 255],
+      fillColor: headerFillRGB,
+      textColor: headerColorRGB,
       fontStyle: 'bold',
       halign: 'center',
-      fontSize: 8, // Keep header font slightly larger
+      fontSize: tableFontSize, // Use specified font size
       minCellHeight: 20, // Minimum height for header cells
       valign: 'middle',
       overflow: 'linebreak'
@@ -748,21 +780,7 @@ export const exportJsonToPdf = (payload: ExportPayload): JsPDFInstance => {
 
   doc.putTotalPages(TOTAL_PAGES_PLACEHOLDER);
 
-  const lastTable = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable;
-  const finalY = lastTable?.finalY ?? margin.top;
-
-  if (footnote) {
-    const nextY = finalY + 20;
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(9);
-    doc.setTextColor(80, 80, 80);
-    if (nextY > pageHeight - margin.bottom) {
-      doc.addPage();
-      doc.text(footnote, margin.left, margin.top);
-    } else {
-      doc.text(footnote, margin.left, nextY);
-    }
-  }
+  // Remove footnote logic - not needed for ag-grid format
 
   return doc;
 };
