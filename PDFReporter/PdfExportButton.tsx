@@ -5,8 +5,6 @@ import { exportJsonToPdf } from './pdfExport';
 export interface IPdfExportButtonProps {
   tableData?: string;
   buttonText?: string;
-  buttonWidth?: number;
-  buttonHeight?: number;
   buttonColor?: string;
   buttonTextColor?: string;
   buttonFontSize?: number;
@@ -117,8 +115,6 @@ export const PdfExportButton: React.FC<IPdfExportButtonProps> = (props) => {
   const {
     tableData,
     buttonText = 'Export PDF',
-    buttonWidth = 140,
-    buttonHeight = 44,
     buttonColor = '#712d3d',
     buttonTextColor = '#ffffff',
     buttonFontSize = 14,
@@ -185,8 +181,8 @@ export const PdfExportButton: React.FC<IPdfExportButtonProps> = (props) => {
   }, [autoDownload, openInNewTab, pdfFileName, pdfFootnote, pdfLogo, pdfSubtitle, pdfTitle, tableData]);
 
   const buttonStyle: React.CSSProperties = React.useMemo(() => ({
-    width: `${buttonWidth}px`,
-    height: `${buttonHeight}px`,
+    width: '100%',
+    height: '100%',
     backgroundColor: buttonColor,
     color: buttonTextColor,
     fontSize: `${buttonFontSize}px`,
@@ -195,10 +191,10 @@ export const PdfExportButton: React.FC<IPdfExportButtonProps> = (props) => {
     cursor: 'pointer',
     fontWeight: 600,
     transition: 'all 0.2s ease'
-  }), [buttonBorderRadius, buttonColor, buttonFontSize, buttonHeight, buttonTextColor, buttonWidth]);
+  }), [buttonBorderRadius, buttonColor, buttonFontSize, buttonTextColor]);
 
   return (
-    <div style={{ padding: '10px', fontFamily: 'Segoe UI, sans-serif' }}>
+    <div style={{ width: '100%', height: '100%', fontFamily: 'Segoe UI, sans-serif', position: 'relative' }}>
       <button
         type="button"
         style={buttonStyle}

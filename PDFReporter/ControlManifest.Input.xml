@@ -29,8 +29,6 @@
 
   <!-- Button customization -->
   <property name="buttonText" display-name-key="Button Text" description-key="Text displayed in the export button" of-type="SingleLine.Text" usage="input" required="false" default-value="Export PDF" />
-  <property name="buttonWidth" display-name-key="Button Width" description-key="Width of the button in pixels" of-type="Whole.None" usage="input" required="false" default-value="140" />
-  <property name="buttonHeight" display-name-key="Button Height" description-key="Height of the button in pixels" of-type="Whole.None" usage="input" required="false" default-value="44" />
   <property name="buttonColor" display-name-key="Button Color" description-key="Background color of the button" of-type="SingleLine.Text" usage="input" required="false" default-value="#712d3d" />
   <property name="buttonTextColor" display-name-key="Button Text Color" description-key="Text color of the button" of-type="SingleLine.Text" usage="input" required="false" default-value="#ffffff" />
   <property name="buttonFontSize" display-name-key="Button Font Size" description-key="Font size in pixels of the button text" of-type="Whole.None" usage="input" required="false" default-value="14" />

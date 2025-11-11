@@ -33,11 +33,13 @@ export class PDFReporter implements ComponentFramework.ReactControl<IInputs, IOu
      * @returns ReactElement root react element for the control
      */
     public updateView(context: ComponentFramework.Context<IInputs>): React.ReactElement {
+        const { width, height } = context.mode.allocatedHeight !== -1 && context.mode.allocatedWidth !== -1
+            ? { width: context.mode.allocatedWidth, height: context.mode.allocatedHeight }
+            : { width: undefined, height: undefined };
+
         const props: IPdfExportButtonProps = {
             tableData: context.parameters.tableData?.raw ?? undefined,
             buttonText: context.parameters.buttonText?.raw ?? undefined,
-            buttonWidth: context.parameters.buttonWidth?.raw ?? undefined,
-            buttonHeight: context.parameters.buttonHeight?.raw ?? undefined,
             buttonColor: context.parameters.buttonColor?.raw ?? undefined,
             buttonTextColor: context.parameters.buttonTextColor?.raw ?? undefined,
             buttonFontSize: context.parameters.buttonFontSize?.raw ?? undefined,
@@ -51,7 +53,17 @@ export class PDFReporter implements ComponentFramework.ReactControl<IInputs, IOu
             autoDownload: context.parameters.autoDownload?.raw ?? true
         };
 
-        return React.createElement(PdfExportButton, props);
+        return React.createElement(
+            'div',
+            {
+                style: {
+                    width: width ? `${width}px` : '100%',
+                    height: height ? `${height}px` : '100%',
+                    overflow: 'hidden'
+                }
+            },
+            React.createElement(PdfExportButton, props)
+        );
     }
 
     /**
