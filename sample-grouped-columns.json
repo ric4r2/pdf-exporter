@@ -1,0 +1,214 @@
+{
+  "title": "Quarterly Sales Report",
+  "subtitle": "Performance by Region - 2025",
+  "footnote": "Data includes all regions and product categories",
+  "rows": [
+    {
+      "region": "North",
+      "q1Sales": 125000.50,
+      "q1Profit": 25000.10,
+      "q2Sales": 145000.75,
+      "q2Profit": 32000.25,
+      "q3Sales": 135000.00,
+      "q3Profit": 28000.50,
+      "q4Sales": 155000.25,
+      "q4Profit": 35000.75
+    },
+    {
+      "region": "South",
+      "q1Sales": 98000.00,
+      "q1Profit": 18000.00,
+      "q2Sales": 112000.50,
+      "q2Profit": 22000.10,
+      "q3Sales": 105000.25,
+      "q3Profit": 20000.50,
+      "q4Sales": 128000.75,
+      "q4Profit": 26000.25
+    },
+    {
+      "region": "East",
+      "q1Sales": 210000.00,
+      "q1Profit": 42000.00,
+      "q2Sales": 235000.50,
+      "q2Profit": 48000.25,
+      "q3Sales": 225000.75,
+      "q3Profit": 45000.50,
+      "q4Sales": 250000.00,
+      "q4Profit": 52000.00
+    },
+    {
+      "region": "West",
+      "q1Sales": 175000.25,
+      "q1Profit": 35000.50,
+      "q2Sales": 188000.75,
+      "q2Profit": 38000.75,
+      "q3Sales": 195000.00,
+      "q3Profit": 40000.00,
+      "q4Sales": 205000.50,
+      "q4Profit": 43000.25
+    }
+  ],
+  "summaryRows": [
+    {
+      "__rowType": "total",
+      "region": "TOTAL",
+      "q1Sales": 608000.75,
+      "q1Profit": 120000.60,
+      "q2Sales": 680001.50,
+      "q2Profit": 140001.35,
+      "q3Sales": 660001.00,
+      "q3Profit": 133001.50,
+      "q4Sales": 738001.50,
+      "q4Profit": 156001.25
+    }
+  ],
+  "columnDefs": [
+    {
+      "field": "region",
+      "headerName": "Region"
+    },
+    {
+      "headerName": "Q1 Performance",
+      "children": [
+        { "field": "q1Sales", "headerName": "Sales" },
+        { "field": "q1Profit", "headerName": "Profit" }
+      ]
+    },
+    {
+      "headerName": "Q2 Performance",
+      "children": [
+        { "field": "q2Sales", "headerName": "Sales" },
+        { "field": "q2Profit", "headerName": "Profit" }
+      ]
+    },
+    {
+      "headerName": "Q3 Performance",
+      "children": [
+        { "field": "q3Sales", "headerName": "Sales" },
+        { "field": "q3Profit", "headerName": "Profit" }
+      ]
+    },
+    {
+      "headerName": "Q4 Performance",
+      "children": [
+        { "field": "q4Sales", "headerName": "Sales" },
+        { "field": "q4Profit", "headerName": "Profit" }
+      ]
+    }
+  ],
+  "columnConfigs": [
+    {
+      "NombreColumna": "region",
+      "NombreMostrar": "Region",
+      "TipoColumna": "String",
+      "Print": {
+        "Printable": true,
+        "WidthPercentage": "12"
+      }
+    },
+    {
+      "NombreColumna": "q1Sales",
+      "NombreMostrar": "Q1 Sales",
+      "TipoColumna": "number",
+      "PropiedadesColumna": {
+        "Formato": "Dinero",
+        "DecimalesdeRedondeo": 2
+      },
+      "Print": {
+        "Printable": true,
+        "WidthPercentage": "11"
+      }
+    },
+    {
+      "NombreColumna": "q1Profit",
+      "NombreMostrar": "Q1 Profit",
+      "TipoColumna": "number",
+      "PropiedadesColumna": {
+        "Formato": "Dinero",
+        "DecimalesdeRedondeo": 2
+      },
+      "Print": {
+        "Printable": true,
+        "WidthPercentage": "11"
+      }
+    },
+    {
+      "NombreColumna": "q2Sales",
+      "NombreMostrar": "Q2 Sales",
+      "TipoColumna": "number",
+      "PropiedadesColumna": {
+        "Formato": "Dinero",
+        "DecimalesdeRedondeo": 2
+      },
+      "Print": {
+        "Printable": true,
+        "WidthPercentage": "11"
+      }
+    },
+    {
+      "NombreColumna": "q2Profit",
+      "NombreMostrar": "Q2 Profit",
+      "TipoColumna": "number",
+      "PropiedadesColumna": {
+        "Formato": "Dinero",
+        "DecimalesdeRedondeo": 2
+      },
+      "Print": {
+        "Printable": true,
+        "WidthPercentage": "11"
+      }
+    },
+    {
+      "NombreColumna": "q3Sales",
+      "NombreMostrar": "Q3 Sales",
+      "TipoColumna": "number",
+      "PropiedadesColumna": {
+        "Formato": "Dinero",
+        "DecimalesdeRedondeo": 2
+      },
+      "Print": {
+        "Printable": true,
+        "WidthPercentage": "11"
+      }
+    },
+    {
+      "NombreColumna": "q3Profit",
+      "NombreMostrar": "Q3 Profit",
+      "TipoColumna": "number",
+      "PropiedadesColumna": {
+        "Formato": "Dinero",
+        "DecimalesdeRedondeo": 2
+      },
+      "Print": {
+        "Printable": true,
+        "WidthPercentage": "11"
+      }
+    },
+    {
+      "NombreColumna": "q4Sales",
+      "NombreMostrar": "Q4 Sales",
+      "TipoColumna": "number",
+      "PropiedadesColumna": {
+        "Formato": "Dinero",
+        "DecimalesdeRedondeo": 2
+      },
+      "Print": {
+        "Printable": true,
+        "WidthPercentage": "11"
+      }
+    },
+    {
+      "NombreColumna": "q4Profit",
+      "NombreMostrar": "Q4 Profit",
+      "TipoColumna": "number",
+      "PropiedadesColumna": {
+        "Formato": "Dinero",
+        "DecimalesdeRedondeo": 2
+      },
+      "Print": {
+        "Printable": true,
+        "WidthPercentage": "11"
+      }
+    }
+  ]
+}

@@ -155,6 +155,58 @@ You can mark special rows using the `__rowType` property:
 - `groupTotal` or `subtotal`: Subtotal row
 - `total` or `grandtotal`: Grand total row
 
+### Grouped Column Headers
+
+You can create grouped column headers (parent columns) using the `columnDefs` property. This allows you to organize related columns under a common header.
+
+**Example with Column Groups:**
+```json
+{
+  "rows": [
+    { "q1Sales": 1000, "q2Sales": 1200, "q1Profit": 200, "q2Profit": 300 }
+  ],
+  "columnDefs": [
+    {
+      "headerName": "First Half Performance",
+      "children": [
+        { "field": "q1Sales", "headerName": "Q1 Sales" },
+        { "field": "q2Sales", "headerName": "Q2 Sales" }
+      ]
+    },
+    {
+      "headerName": "Profitability",
+      "children": [
+        { "field": "q1Profit", "headerName": "Q1 Profit" },
+        { "field": "q2Profit", "headerName": "Q2 Profit" }
+      ]
+    }
+  ],
+  "columnConfigs": [
+    { "NombreColumna": "q1Sales", "TipoColumna": "number", "PropiedadesColumna": { "Formato": "Dinero" } },
+    { "NombreColumna": "q2Sales", "TipoColumna": "number", "PropiedadesColumna": { "Formato": "Dinero" } },
+    { "NombreColumna": "q1Profit", "TipoColumna": "number", "PropiedadesColumna": { "Formato": "Dinero" } },
+    { "NombreColumna": "q2Profit", "TipoColumna": "number", "PropiedadesColumna": { "Formato": "Dinero" } }
+  ]
+}
+```
+
+The `columnDefs` structure:
+- **headerName**: The parent/group column name that appears in the header
+- **children**: Array of child columns under this group
+  - **field**: The data field name (matches row property)
+  - **headerName**: The column header text
+
+This creates a two-row header:
+- Top row: Parent column names spanning multiple columns
+- Bottom row: Individual column names
+
+### Table Layout Features
+
+✅ **Centered Tables**: Tables are automatically centered horizontally on the page
+✅ **Text Wrapping**: Long text wraps within cells instead of being cut off
+✅ **No Horizontal Overflow**: Content stays within page boundaries
+✅ **Multi-line Cells**: Text can span multiple lines within the same row
+
 ## Sample Data
 
 See `sample-data.json` for a complete example with all features.

@@ -1,0 +1,66 @@
+{
+  "title": "Text Wrapping Test Report",
+  "subtitle": "Demonstrating proper text wrapping in cells",
+  "footnote": "All text should wrap properly without being cut off",
+  "rows": [
+    {
+      "id": 1,
+      "shortText": "Short",
+      "mediumText": "This is a medium length text",
+      "longText": "This is a very long text that should wrap properly within the cell boundaries without being cut off or causing the table to overflow horizontally on the page"
+    },
+    {
+      "id": 2,
+      "shortText": "OK",
+      "mediumText": "Another medium text here",
+      "longText": "Another example of a very long text string that needs to wrap within the cell to demonstrate that the text wrapping functionality is working correctly in the PDF export component"
+    },
+    {
+      "id": 3,
+      "shortText": "Test",
+      "mediumText": "Testing wrapping behavior",
+      "longText": "The third row also contains very long text to ensure consistency across all rows and to verify that the wrapping mechanism handles multiple rows with long content appropriately"
+    }
+  ],
+  "columnConfigs": [
+    {
+      "NombreColumna": "id",
+      "NombreMostrar": "ID",
+      "TipoColumna": "number",
+      "PropiedadesColumna": {
+        "Formato": "numero"
+      },
+      "Print": {
+        "Printable": true,
+        "WidthPercentage": "5"
+      }
+    },
+    {
+      "NombreColumna": "shortText",
+      "NombreMostrar": "Short",
+      "TipoColumna": "String",
+      "Print": {
+        "Printable": true,
+        "WidthPercentage": "10"
+      }
+    },
+    {
+      "NombreColumna": "mediumText",
+      "NombreMostrar": "Medium Text",
+      "TipoColumna": "String",
+      "Print": {
+        "Printable": true,
+        "WidthPercentage": "25"
+      }
+    },
+    {
+      "NombreColumna": "longText",
+      "NombreMostrar": "Long Text (Should Wrap)",
+      "TipoColumna": "String",
+      "Print": {
+        "Printable": true,
+        "WidthPercentage": "60"
+      }
+    }
+  ]
+}

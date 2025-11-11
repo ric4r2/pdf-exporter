@@ -360,7 +360,8 @@ const generateGroupHeaders = (
   for (let index = 0; index < groupNames.length; ) {
     const currentName = groupNames[index];
     if (!currentName) {
-      groupHeaderRow.push({ content: '', colSpan: 1, styles: { fillColor: GROUP_ROW_COLOR } });
+      // Use same color as normal headers for non-grouped columns
+      groupHeaderRow.push({ content: '', colSpan: 1, styles: { fillColor: [113, 45, 61] } });
       index += 1;
       continue;
     }
@@ -378,7 +379,7 @@ const generateGroupHeaders = (
       content: currentName,
       colSpan: span,
       styles: {
-        fillColor: [180, 180, 180],
+        fillColor: [113, 45, 61], // Same color as normal headers
         fontStyle: 'bold',
         halign: 'center',
         textColor: [255, 255, 255]
@@ -633,12 +634,9 @@ export const exportJsonToPdf = (payload: ExportPayload): JsPDFInstance => {
   const { body, metadata } = buildBodyRows(printableColumns, rows, summaryRows);
 
   const totalWidthWeight = printableColumns.reduce((sum, column) => sum + column.widthWeight, 0);
-  const columnStyles: Record<string, { cellWidth: number; halign?: 'left' | 'center' | 'right' }> = {};
+  const columnStyles: Record<string, { cellWidth: number; halign?: 'left' | 'center' | 'right'; overflow?: 'linebreak' }> = {};
 
   printableColumns.forEach(column => {
-    const relative = column.widthWeight / totalWidthWeight;
-    // Increased minimum width from 40 to 60 to prevent text overlap
-    const width = Math.max(relative * availableWidth, 60);
     const alignment = (() => {
       const columnType = column.columnConfig?.TipoColumna;
       if (columnType === 'number') {
@@ -650,9 +648,12 @@ export const exportJsonToPdf = (payload: ExportPayload): JsPDFInstance => {
       return 'left' as const;
     })();
 
+    // Calculate actual column width based on available space and weight
+    const columnWidth = (column.widthWeight / totalWidthWeight) * availableWidth;
     columnStyles[column.dataKey] = {
-      cellWidth: width,
-      halign: alignment
+      cellWidth: columnWidth,
+      halign: alignment,
+      overflow: 'linebreak'
     };
   });
 
@@ -713,17 +714,17 @@ export const exportJsonToPdf = (payload: ExportPayload): JsPDFInstance => {
     body,
     // Ensure table starts below the header with proper spacing
     startY: margin.top,
-    margin,
+    margin, // Use equal margins on both sides
     styles: {
       font: 'helvetica',
       fontSize: 7, // Reduced from 8 to 7 to fit more content
-      cellPadding: 3, // Reduced padding to fit more content
-      overflow: 'linebreak',
-      cellWidth: 'wrap', // Ensure cells wrap content properly
-      minCellHeight: 12, // Reduced minimum height to fit more rows
-      valign: 'middle', // Vertical alignment
+      cellPadding: 4, // Padding for better readability
+      overflow: 'linebreak', // Wrap text instead of cutting
+      minCellHeight: 15, // Minimum height to accommodate wrapped text
+      valign: 'top', // Top alignment for wrapped text
       lineWidth: 0.1,
-      lineColor: [200, 200, 200]
+      lineColor: [200, 200, 200],
+      halign: 'left'
     },
     headStyles: {
       fillColor: [113, 45, 61],
@@ -731,14 +732,15 @@ export const exportJsonToPdf = (payload: ExportPayload): JsPDFInstance => {
       fontStyle: 'bold',
       halign: 'center',
       fontSize: 8, // Keep header font slightly larger
-      minCellHeight: 18, // Minimum height for header cells
-      valign: 'middle'
+      minCellHeight: 20, // Minimum height for header cells
+      valign: 'middle',
+      overflow: 'linebreak'
     },
     columnStyles,
     showHead: 'everyPage',
-    tableWidth: 'wrap', // Changed from 'auto' to 'wrap' for better fitting
-    horizontalPageBreak: true, // Enable horizontal page breaks if needed
-    horizontalPageBreakRepeat: 0, // Repeat first column on horizontal page break
+    tableWidth: availableWidth, // Use full available width
+    horizontalPageBreak: false, // Disable horizontal breaks to keep table intact
+    theme: 'grid',
     willDrawCell: undefined,
     didParseCell: (data: CellHookData) => applyRowStyling(data, metadata),
     didDrawPage
