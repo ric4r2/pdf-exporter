@@ -16,6 +16,7 @@ export interface IPdfExportButtonProps {
   color?: string;
   borderColor?: string;
   borderThickness?: number;
+  borderRadius?: number;
   hoverFill?: string;
   hoverColor?: string;
   hoverBorderColor?: string;
@@ -145,36 +146,45 @@ export const PdfExportButton: React.FC<IPdfExportButtonProps> = (props) => {
   const currentBorderColor = isPressed ? (props.pressedBorderColor ?? props.borderColor ?? '#712d3d') : isHovered ? (props.hoverBorderColor ?? props.borderColor ?? '#712d3d') : (props.borderColor ?? '#712d3d');
 
   const buttonStyle: React.CSSProperties = {
+    width: '100%',
+    height: '100%',
     backgroundColor: currentFill,
     color: currentColor,
     border: `${props.borderThickness ?? 1}px solid ${currentBorderColor}`,
     padding: '10px 20px',
     fontSize: '14px',
     fontWeight: '600',
-    borderRadius: '6px',
+    borderRadius: `${props.borderRadius ?? 6}px`,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     outline: 'none',
-    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    boxSizing: 'border-box'
   };
 
   const containerStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    gap: '12px',
-    padding: '16px',
+    width: '100%',
+    height: '100%',
+    padding: '4px',
+    boxSizing: 'border-box',
+    position: 'relative',
     fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
   };
 
   const feedbackStyle: React.CSSProperties = {
+    position: 'absolute',
+    bottom: '8px',
+    left: '8px',
+    right: '8px',
     padding: '8px 12px',
     borderRadius: '4px',
-    fontSize: '13px',
+    fontSize: '12px',
     fontWeight: '500',
     backgroundColor: feedback?.type === 'success' ? '#d4edda' : '#f8d7da',
     color: feedback?.type === 'success' ? '#155724' : '#721c24',
-    border: `1px solid ${feedback?.type === 'success' ? '#c3e6cb' : '#f5c6cb'}`
+    border: `1px solid ${feedback?.type === 'success' ? '#c3e6cb' : '#f5c6cb'}`,
+    zIndex: 1000,
+    pointerEvents: 'none'
   };
 
   return (
