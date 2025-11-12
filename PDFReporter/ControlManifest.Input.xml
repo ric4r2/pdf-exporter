@@ -39,6 +39,8 @@
   <property name="color" display-name-key="Button Text Color" description-key="Text color of the button (hex format)" of-type="SingleLine.Text" usage="input" required="false" default-value="#ffffff" />
   <property name="borderColor" display-name-key="Button Border Color" description-key="Border color of the button (hex format)" of-type="SingleLine.Text" usage="input" required="false" default-value="#712d3d" />
   <property name="borderRadius" display-name-key="Button Border Radius" description-key="Border radius of the button in pixels" of-type="Whole.None" usage="input" required="false" default-value="6" />
+  <property name="buttonFontSize" display-name-key="Button Font Size" description-key="Font size of the button text in pixels" of-type="Whole.None" usage="input" required="false" default-value="14" />
+  <property name="buttonFontWeight" display-name-key="Button Font Weight" description-key="Font weight of the button text (100-900)" of-type="Whole.None" usage="input" required="false" default-value="600" />
   <property name="borderThickness" display-name-key="Button Border Thickness" description-key="Border thickness in pixels" of-type="Whole.None" usage="input" required="false" default-value="1" />
   
   <!-- Button Styling (Hover State) -->

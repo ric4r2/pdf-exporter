@@ -17,6 +17,8 @@ export interface IPdfExportButtonProps {
   borderColor?: string;
   borderThickness?: number;
   borderRadius?: number;
+  buttonFontSize?: number;
+  buttonFontWeight?: number;
   hoverFill?: string;
   hoverColor?: string;
   hoverBorderColor?: string;
@@ -32,13 +34,11 @@ interface FeedbackState {
 
 const cleanJsonString = (raw: string): string => {
   let cleaned = raw.trim();
+  // Only remove outer quotes if the JSON is wrapped in extra quotes from Power Apps
   if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith('\'') && cleaned.endsWith('\''))) {
     cleaned = cleaned.slice(1, -1);
   }
-  cleaned = cleaned.replace(/\\"/g, '"')
-    .replace(/\\'/g, '\'')
-    .replace(/\\n/g, '\n')
-    .replace(/\\r/g, '\r');
+  // Don't process escape sequences - JSON.parse will handle them correctly
   return cleaned;
 };
 
@@ -95,47 +95,62 @@ const parseColumnGroups = (columnGroups: string): ColumnGroup[] => {
 };
 
 export const PdfExportButton: React.FC<IPdfExportButtonProps> = (props) => {
-  const [feedback, setFeedback] = React.useState<FeedbackState | null>(null);
+  const [feedback, setFeedback] = React.useState<FeedbackState | undefined>(undefined);
   const [isHovered, setIsHovered] = React.useState(false);
   const [isPressed, setIsPressed] = React.useState(false);
+  const [isGenerating, setIsGenerating] = React.useState(false);
+  const lastClickTime = React.useRef<number>(0);
 
   const handleExport = React.useCallback((): void => {
-    try {
-      if (!props.apiUrl?.trim()) {
-        throw new Error('No se proporcionó el parámetro apiUrl (datos de la tabla).');
-      }
-      if (!props.columnConfig?.trim()) {
-        throw new Error('No se proporcionó el parámetro columnConfig (configuración de columnas).');
-      }
-      const parsedApiUrl = parseApiUrl(props.apiUrl);
-      const parsedColumnConfig = parseColumnConfig(props.columnConfig);
-      const parsedColumnGroups = props.columnGroups?.trim() ? parseColumnGroups(props.columnGroups) : undefined;
-      const exportOptions: ExportOptions = {
-        apiUrl: parsedApiUrl,
-        columnConfig: parsedColumnConfig,
-        columnGroups: parsedColumnGroups,
-        pdfFileName: props.pdfFileName?.trim(),
-        pdfExportTitle: props.pdfExportTitle?.trim(),
-        pdfExportSubtitle: props.pdfExportSubtitle?.trim(),
-        headerFill: props.headerFill?.trim(),
-        headerColor: props.headerColor?.trim(),
-        fontSize: props.fontSize
-      };
-      const doc = exportJsonToPdf(exportOptions);
-      const fileName = (props.pdfFileName?.trim() ?? 'grid-export') + '.pdf';
-      doc.output('dataurlnewwindow');
-      doc.save(fileName);
-      setFeedback({ type: 'success', message: 'PDF generado correctamente.' });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      setFeedback({ type: 'error', message: `Error al generar el PDF: ${errorMessage}` });
-      console.error('Error al exportar PDF:', error);
+    // Debounce: prevent multiple clicks within 2 seconds
+    const now = Date.now();
+    if (now - lastClickTime.current < 2000 || isGenerating) {
+      return;
     }
-  }, [props]);
+    lastClickTime.current = now;
+    setIsGenerating(true);
+    
+    // Use setTimeout to allow UI to update before heavy processing
+    setTimeout(() => {
+      try {
+        if (!props.apiUrl?.trim()) {
+          throw new Error('No se proporcionó el parámetro apiUrl (datos de la tabla).');
+        }
+        if (!props.columnConfig?.trim()) {
+          throw new Error('No se proporcionó el parámetro columnConfig (configuración de columnas).');
+        }
+        const parsedApiUrl = parseApiUrl(props.apiUrl);
+        const parsedColumnConfig = parseColumnConfig(props.columnConfig);
+        const parsedColumnGroups = props.columnGroups?.trim() ? parseColumnGroups(props.columnGroups) : undefined;
+        const exportOptions: ExportOptions = {
+          apiUrl: parsedApiUrl,
+          columnConfig: parsedColumnConfig,
+          columnGroups: parsedColumnGroups,
+          pdfFileName: props.pdfFileName?.trim(),
+          pdfExportTitle: props.pdfExportTitle?.trim(),
+          pdfExportSubtitle: props.pdfExportSubtitle?.trim(),
+          headerFill: props.headerFill?.trim(),
+          headerColor: props.headerColor?.trim(),
+          fontSize: props.fontSize
+        };
+        const doc = exportJsonToPdf(exportOptions);
+        const fileName = (props.pdfFileName?.trim() ?? 'grid-export') + '.pdf';
+        doc.output('dataurlnewwindow');
+        doc.save(fileName);
+        // Reset after successful generation
+        setTimeout(() => setIsGenerating(false), 500);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        setFeedback({ type: 'error', message: `Error al generar el PDF: ${errorMessage}` });
+        console.error('Error al exportar PDF:', error);
+        setIsGenerating(false);
+      }
+    }, 100);
+  }, [props, isGenerating]);
 
   React.useEffect(() => {
     if (feedback) {
-      const timerId = setTimeout(() => { setFeedback(null); }, 5000);
+      const timerId = setTimeout(() => { setFeedback(undefined); }, 5000);
       return () => { clearTimeout(timerId); };
     }
     return undefined;
@@ -152,14 +167,15 @@ export const PdfExportButton: React.FC<IPdfExportButtonProps> = (props) => {
     color: currentColor,
     border: `${props.borderThickness ?? 1}px solid ${currentBorderColor}`,
     padding: '10px 20px',
-    fontSize: '14px',
-    fontWeight: '600',
+    fontSize: `${props.buttonFontSize ?? 14}px`,
+    fontWeight: props.buttonFontWeight ?? 600,
     borderRadius: `${props.borderRadius ?? 6}px`,
-    cursor: 'pointer',
+    cursor: isGenerating ? 'wait' : 'pointer',
     transition: 'all 0.2s ease',
     outline: 'none',
     fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    boxSizing: 'border-box'
+    boxSizing: 'border-box',
+    opacity: isGenerating ? 0.6 : 1
   };
 
   const containerStyle: React.CSSProperties = {
@@ -192,15 +208,15 @@ export const PdfExportButton: React.FC<IPdfExportButtonProps> = (props) => {
       <button
         type="button"
         onClick={handleExport}
-        onMouseEnter={() => setIsHovered(true)}
+        onMouseEnter={() => !isGenerating && setIsHovered(true)}
         onMouseLeave={() => { setIsHovered(false); setIsPressed(false); }}
-        onMouseDown={() => setIsPressed(true)}
+        onMouseDown={() => !isGenerating && setIsPressed(true)}
         onMouseUp={() => setIsPressed(false)}
         style={buttonStyle}
+        disabled={isGenerating}
       >
-        Exportar a PDF
+        {isGenerating ? 'Generando...' : 'Exportar a PDF'}
       </button>
-      {feedback && <div style={feedbackStyle}>{feedback.message}</div>}
     </div>
   );
 };

@@ -660,8 +660,8 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
   const { headers, hasGroupHeaders } = generateGroupHeaders(columnDefs, printableColumns);
   const { body, metadata } = buildBodyRows(printableColumns, apiUrl, undefined);
 
-  const totalWidthWeight = printableColumns.reduce((sum, column) => sum + column.widthWeight, 0);
   const columnStyles: Record<string, { cellWidth: number; halign?: 'left' | 'center' | 'right'; overflow?: 'linebreak' }> = {};
+  let totalTableWidth = 0;
 
   printableColumns.forEach(column => {
     const alignment = (() => {
@@ -675,14 +675,42 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
       return 'left' as const;
     })();
 
-    // Calculate actual column width based on available space and weight
-    const columnWidth = (column.widthWeight / totalWidthWeight) * availableWidth;
+    // Calculate column width: always use WidthPercentage as absolute percentage if defined
+    let columnWidth: number;
+    const widthPercentage = column.columnConfig?.Print?.WidthPercentage;
+    if (widthPercentage) {
+      // Use absolute percentage of available width (WidthPercentage is the actual percentage value)
+      const percentage = parseFloat(String(widthPercentage));
+      console.log(`Column ${column.dataKey}: WidthPercentage=${widthPercentage}, parsed=${percentage}, availableWidth=${availableWidth}`);
+      if (Number.isFinite(percentage) && percentage > 0) {
+        columnWidth = (percentage / 100) * availableWidth;
+      } else {
+        console.warn(`Invalid WidthPercentage for ${column.dataKey}: ${widthPercentage}`);
+        columnWidth = availableWidth / printableColumns.length;
+      }
+    } else {
+      // Fallback to default width if not specified
+      columnWidth = availableWidth / printableColumns.length;
+    }
+    
+    totalTableWidth += columnWidth;
+    
     columnStyles[column.dataKey] = {
       cellWidth: columnWidth,
       halign: alignment,
       overflow: 'linebreak'
     };
   });
+
+  // Calculate margin to center the table
+  const tableMarginLeft = margin.left + (availableWidth - totalTableWidth) / 2;
+  const tableMarginRight = margin.right + (availableWidth - totalTableWidth) / 2;
+  const centeredMargin = {
+    top: margin.top,
+    right: tableMarginRight,
+    bottom: margin.bottom,
+    left: tableMarginLeft
+  };
 
   const currentDate = new Date().toLocaleDateString('es-MX');
 
@@ -746,7 +774,7 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
     body,
     // Ensure table starts below the header with proper spacing
     startY: margin.top,
-    margin, // Use equal margins on both sides
+    margin: centeredMargin, // Use centered margins to align table
     styles: {
       font: 'helvetica',
       fontSize: tableFontSize - 2, // Body font slightly smaller than specified
@@ -770,7 +798,7 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
     },
     columnStyles,
     showHead: 'everyPage',
-    tableWidth: availableWidth, // Use full available width
+    tableWidth: 'auto', // Let autoTable respect our column widths
     horizontalPageBreak: false, // Disable horizontal breaks to keep table intact
     theme: 'grid',
     willDrawCell: undefined,

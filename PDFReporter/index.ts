@@ -59,6 +59,8 @@ export class PDFReporter implements ComponentFramework.ReactControl<IInputs, IOu
             borderColor: context.parameters.borderColor?.raw ?? undefined,
             borderThickness: context.parameters.borderThickness?.raw ?? undefined,
             borderRadius: context.parameters.borderRadius?.raw ?? undefined,
+            buttonFontSize: context.parameters.buttonFontSize?.raw ?? undefined,
+            buttonFontWeight: context.parameters.buttonFontWeight?.raw ?? undefined,
             
             // Button Styling (Hover State)
             hoverFill: context.parameters.hoverFill?.raw ?? undefined,
