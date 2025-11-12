@@ -63,7 +63,6 @@ interface PrintableColumn {
   header: string;
   dataKey: string;
   columnConfig?: ColumnConfig;
-  widthWeight: number;
 }
 
 interface ParsedArray {
@@ -256,23 +255,10 @@ const buildPrintableColumns = (
 
       const header = columnConfig?.NombreMostrar ?? def.headerName ?? normalizedKey;
 
-      const widthWeight = (() => {
-        if (columnConfig?.Print?.WidthPercentage) {
-          const numeric = parseFloat(columnConfig.Print.WidthPercentage);
-          return Number.isFinite(numeric) ? numeric : 0;
-        }
-        if (columnConfig?.WidthDefault) {
-          const widthAsNumber = parseFloat(columnConfig.WidthDefault);
-          return Number.isFinite(widthAsNumber) ? widthAsNumber / 10 : 0;
-        }
-        return 0;
-      })();
-
       return {
         header,
         dataKey: normalizedKey,
-        columnConfig,
-        widthWeight: widthWeight > 0 ? widthWeight : 10
+        columnConfig
       } as PrintableColumn;
     })
     .filter((column): column is PrintableColumn => !!column);
@@ -282,14 +268,10 @@ const buildPrintableColumns = (
     .filter(config => !seen.has(config.NombreColumna) && config.Print?.Printable !== false)
     .map(config => {
       seen.add(config.NombreColumna);
-      const widthWeight = config.Print?.WidthPercentage
-        ? parseFloat(config.Print.WidthPercentage)
-        : (config.WidthDefault ? parseFloat(config.WidthDefault) / 10 : 10);
       return {
         header: config.NombreMostrar ?? config.NombreColumna,
         dataKey: config.NombreColumna,
-        columnConfig: config,
-        widthWeight: Number.isFinite(widthWeight) && widthWeight > 0 ? widthWeight : 10
+        columnConfig: config
       } as PrintableColumn;
     });
 
@@ -300,8 +282,7 @@ const buildPrintableColumns = (
     : columnConfigs.map(config => ({
         header: config.NombreMostrar ?? config.NombreColumna,
         dataKey: config.NombreColumna,
-        columnConfig: config,
-        widthWeight: 10
+        columnConfig: config
       }));
 
   return fallbackColumns.sort((a, b) => {
@@ -656,14 +637,15 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
   // Reduced side margins from 36 to 30 to give more space for table content
   const margin = { top: 100, right: 30, bottom: 50, left: 30 };
   const availableWidth = pageWidth - margin.left - margin.right;
+  console.log("====availableWidth: " + availableWidth);
 
   const { headers, hasGroupHeaders } = generateGroupHeaders(columnDefs, printableColumns);
   const { body, metadata } = buildBodyRows(printableColumns, apiUrl, undefined);
 
-  const columnStyles: Record<string, { cellWidth: number; halign?: 'left' | 'center' | 'right'; overflow?: 'linebreak' }> = {};
-  let totalTableWidth = 0;
+  // Use numeric indices for columnStyles (jsPDF-autoTable requirement)
+  const columnStyles: Record<number, { cellWidth?: number; halign?: 'left' | 'center' | 'right'; overflow?: 'linebreak' }> = {};
 
-  printableColumns.forEach(column => {
+  printableColumns.forEach((column, index) => {
     const alignment = (() => {
       const columnType = column.columnConfig?.TipoColumna;
       if (columnType === 'number') {
@@ -675,42 +657,20 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
       return 'left' as const;
     })();
 
-    // Calculate column width: always use WidthPercentage as absolute percentage if defined
-    let columnWidth: number;
     const widthPercentage = column.columnConfig?.Print?.WidthPercentage;
-    if (widthPercentage) {
-      // Use absolute percentage of available width (WidthPercentage is the actual percentage value)
-      const percentage = parseFloat(String(widthPercentage));
-      console.log(`Column ${column.dataKey}: WidthPercentage=${widthPercentage}, parsed=${percentage}, availableWidth=${availableWidth}`);
-      if (Number.isFinite(percentage) && percentage > 0) {
-        columnWidth = (percentage / 100) * availableWidth;
-      } else {
-        console.warn(`Invalid WidthPercentage for ${column.dataKey}: ${widthPercentage}`);
-        columnWidth = availableWidth / printableColumns.length;
-      }
-    } else {
-      // Fallback to default width if not specified
-      columnWidth = availableWidth / printableColumns.length;
-    }
     
-    totalTableWidth += columnWidth;
-    
-    columnStyles[column.dataKey] = {
-      cellWidth: columnWidth,
+    columnStyles[index] = {
+      ...(widthPercentage && {
+        cellWidth: (parseFloat(widthPercentage) / 100) * availableWidth
+      }),
       halign: alignment,
       overflow: 'linebreak'
     };
+
+    console.log(`Column [${index}] ${column.dataKey}: WidthPercentage=${widthPercentage}, cellWidth=${columnStyles[index].cellWidth}`);
   });
 
-  // Calculate margin to center the table
-  const tableMarginLeft = margin.left + (availableWidth - totalTableWidth) / 2;
-  const tableMarginRight = margin.right + (availableWidth - totalTableWidth) / 2;
-  const centeredMargin = {
-    top: margin.top,
-    right: tableMarginRight,
-    bottom: margin.bottom,
-    left: tableMarginLeft
-  };
+
 
   const currentDate = new Date().toLocaleDateString('es-MX');
 
@@ -772,16 +732,15 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
   autoTable(doc, {
     head: headers,
     body,
-    // Ensure table starts below the header with proper spacing
     startY: margin.top,
-    margin: centeredMargin, // Use centered margins to align table
+    margin: margin,
     styles: {
       font: 'helvetica',
-      fontSize: tableFontSize - 2, // Body font slightly smaller than specified
-      cellPadding: 4, // Padding for better readability
-      overflow: 'linebreak', // Wrap text instead of cutting
-      minCellHeight: 15, // Minimum height to accommodate wrapped text
-      valign: 'top', // Top alignment for wrapped text
+      fontSize: tableFontSize - 2,
+      cellPadding: 4,
+      overflow: 'linebreak',
+      minCellHeight: 15,
+      valign: 'top',
       lineWidth: 0.1,
       lineColor: [200, 200, 200],
       halign: 'left'
@@ -791,15 +750,15 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
       textColor: headerColorRGB,
       fontStyle: 'bold',
       halign: 'center',
-      fontSize: tableFontSize, // Use specified font size
-      minCellHeight: 20, // Minimum height for header cells
+      fontSize: tableFontSize,
+      minCellHeight: 20,
       valign: 'middle',
       overflow: 'linebreak'
     },
-    columnStyles,
+    columnStyles: columnStyles,
     showHead: 'everyPage',
-    tableWidth: 'auto', // Let autoTable respect our column widths
-    horizontalPageBreak: false, // Disable horizontal breaks to keep table intact
+    horizontalPageBreak: false,
+    rowPageBreak: 'avoid',
     theme: 'grid',
     willDrawCell: undefined,
     didParseCell: (data: CellHookData) => applyRowStyling(data, metadata),
