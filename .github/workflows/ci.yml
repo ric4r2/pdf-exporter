@@ -68,6 +68,9 @@ jobs:
     - name: Install dependencies
       run: npm ci
     
+    - name: Generate PCF types
+      run: npm run build
+    
     - name: Check TypeScript types
       run: npx tsc --noEmit --skipLibCheck
     
