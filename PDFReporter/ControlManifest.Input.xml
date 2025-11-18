@@ -23,6 +23,7 @@
   <property name="pdfFileName" display-name-key="PDF File Name" description-key="Name of the generated PDF file (without extension)" of-type="SingleLine.Text" usage="input" required="false" default-value="grid-export" />
   <property name="pdfExportTitle" display-name-key="PDF Export Title" description-key="Title rendered in the PDF header" of-type="SingleLine.Text" usage="input" required="false" default-value="Grid Export" />
   <property name="pdfExportSubtitle" display-name-key="PDF Export Subtitle" description-key="Subtitle rendered below the title" of-type="SingleLine.Text" usage="input" required="false" />
+  <property name="logoBase64" display-name-key="Logo Base64" description-key="Base64 encoded logo image. If empty, uses the default logo from logo.ts" of-type="Multiple" usage="input" required="false" />
   
   <!-- Data Sources (ag-grid format) -->
   <property name="apiUrl" display-name-key="API URL Data (JSON)" description-key="JSON array with row data objects (column name and values)" of-type="Multiple" usage="bound" required="true" />

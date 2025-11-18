@@ -54,6 +54,7 @@ export interface ExportOptions {
   pdfFileName?: string;
   pdfExportTitle?: string;
   pdfExportSubtitle?: string;
+  logoBase64?: string; // Custom base64 logo
   headerFill?: string; // hex color
   headerColor?: string; // hex color
   fontSize?: number;
@@ -597,6 +598,7 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
     columnGroups,
     pdfExportTitle,
     pdfExportSubtitle,
+    logoBase64,
     headerFill,
     headerColor,
     fontSize
@@ -627,8 +629,9 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
 
   const documentTitle = pdfExportTitle?.trim() ?? 'Grid Export';
   const documentSubtitle = pdfExportSubtitle?.trim();
-  // Always use the logo from logo.ts
-  const preparedLogo = sanitizeBase64(defaultLogoBase64);
+  // Use custom logo if provided, otherwise use the default from logo.ts
+  const logoToUse = logoBase64?.trim() ?? defaultLogoBase64;
+  const preparedLogo = sanitizeBase64(logoToUse);
 
   const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' }) as JsPDFWithInternal;
   const pageWidth = doc.internal.pageSize.getWidth();
