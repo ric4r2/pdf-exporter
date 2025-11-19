@@ -820,6 +820,54 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
     }
   };
 
+  // Create a callback to add links after cells are drawn
+  const didDrawCell = (data: CellHookData): void => {
+    // Only process body cells
+    if (data.section !== 'body') {
+      return;
+    }
+
+    // Type assertion for extended cell data that includes position and column info
+    // jsPDF-autoTable's CellHookData type doesn't include all runtime properties
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+    const cellData = data as any;
+
+    // Get column index - the data object should have column information
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const columnIndex = cellData.column?.index as number | undefined ?? -1;
+
+    if (columnIndex === -1) {
+      return;
+    }
+
+    const linkInfo = linkData.find(
+      link => link.rowIndex === data.row.index && link.columnIndex === columnIndex
+    );
+
+    if (!linkInfo?.url) {
+      return;
+    }
+
+    // Access cell position properties
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const cellX = cellData.cell.x as number | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const cellY = cellData.cell.y as number | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const cellWidth = cellData.cell.width as number | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const cellHeight = cellData.cell.height as number | undefined;
+
+    if (cellX !== undefined && cellY !== undefined && cellWidth !== undefined && cellHeight !== undefined) {
+      // Add a clickable link annotation to the cell using jsPDF's link method
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+      (doc as any).link(cellX, cellY, cellWidth, cellHeight, { url: linkInfo.url });
+
+      // Optional: Change text color to blue to indicate it's a link
+      data.cell.styles.textColor = [0, 0, 255]; // Blue color for links
+    }
+  };
+
   autoTable(doc, {
     head: headers,
     body,
