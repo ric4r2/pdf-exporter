@@ -602,7 +602,8 @@ const buildBodyRows = (
 
 const applyRowStyling = (
   data: CellHookData,
-  metadata: RowMetadata[]
+  metadata: RowMetadata[],
+  linkData: LinkData[]
 ): void => {
   if (data.section !== 'body') {
     return;
@@ -623,6 +624,20 @@ const applyRowStyling = (
   if (rowInfo.type === 'groupTotal' || rowInfo.type === 'total' || rowInfo.type === 'subtotal') {
     data.cell.styles.fillColor = TOTAL_ROW_COLOR;
     data.cell.styles.fontStyle = 'bold';
+  }
+
+  // Apply blue color and underline to cells with links
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+  const columnIndex = (data as any).column?.index as number | undefined;
+  if (columnIndex !== undefined) {
+    const hasLink = linkData.some(
+      link => link.rowIndex === data.row.index && link.columnIndex === columnIndex
+    );
+    if (hasLink) {
+      data.cell.styles.textColor = [0, 0, 255]; // Bright blue color for links
+      data.cell.styles.fontStyle = 'bold'; // Make it bold
+      console.log(`Applied blue color to row ${data.row.index}, column ${columnIndex}`);
+    }
   }
 };
 
@@ -689,6 +704,11 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
 
   const { headers, hasGroupHeaders } = generateGroupHeaders(columnDefs, printableColumns, headerFillRGB, headerColorRGB);
   const { body, metadata, linkData } = buildBodyRows(printableColumns, apiUrl, undefined, linkTextColumn, linkUrlColumn);
+  
+  console.log('Link configuration:', { linkTextColumn, linkUrlColumn, linkDataCount: linkData.length });
+  if (linkData.length > 0) {
+    console.log('Sample link data:', linkData[0]);
+  }
 
   // Use numeric indices for columnStyles (jsPDF-autoTable requirement)
   const columnStyles: Record<number, { cellWidth?: number; halign?: 'left' | 'center' | 'right'; overflow?: 'linebreak' }> = {};
@@ -814,9 +834,6 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
       // Add a clickable link annotation to the cell using jsPDF's link method
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
       (doc as any).link(cellX, cellY, cellWidth, cellHeight, { url: linkInfo.url });
-
-      // Optional: Change text color to blue to indicate it's a link
-      data.cell.styles.textColor = [0, 0, 255]; // Blue color for links
     }
   };
 
@@ -852,7 +869,7 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
     rowPageBreak: 'avoid',
     theme: 'grid',
     willDrawCell: undefined,
-    didParseCell: (data: CellHookData) => applyRowStyling(data, metadata),
+    didParseCell: (data: CellHookData) => applyRowStyling(data, metadata, linkData),
     didDrawCell: linkData.length > 0 ? didDrawCell : undefined,
     didDrawPage
   });
