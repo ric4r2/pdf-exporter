@@ -298,7 +298,9 @@ const buildPrintableColumns = (
 
 const generateGroupHeaders = (
   columnDefs: ColumnDefinition[] | undefined,
-  printableColumns: PrintableColumn[]
+  printableColumns: PrintableColumn[],
+  headerFillRGB?: [number, number, number],
+  headerColorRGB?: [number, number, number]
 ): {
   headers: RowInput[];
   hasGroupHeaders: boolean;
@@ -309,6 +311,10 @@ const generateGroupHeaders = (
       hasGroupHeaders: false
     };
   }
+
+  // Use provided colors or defaults
+  const fillColor = headerFillRGB ?? [113, 45, 61];
+  const textColor = headerColorRGB ?? [255, 255, 255];
 
   const groupPathCache = new Map<string, string | undefined>();
 
@@ -363,7 +369,7 @@ const generateGroupHeaders = (
     const currentName = groupNames[index];
     if (!currentName) {
       // Use same color as normal headers for non-grouped columns
-      groupHeaderRow.push({ content: '', colSpan: 1, styles: { fillColor: [113, 45, 61] } });
+      groupHeaderRow.push({ content: '', colSpan: 1, styles: { fillColor: fillColor } });
       index += 1;
       continue;
     }
@@ -381,10 +387,10 @@ const generateGroupHeaders = (
       content: currentName,
       colSpan: span,
       styles: {
-        fillColor: [113, 45, 61], // Same color as normal headers
+        fillColor: fillColor,
         fontStyle: 'bold',
         halign: 'center',
-        textColor: [255, 255, 255]
+        textColor: textColor
       }
     });
     index += span;
@@ -676,7 +682,12 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
   const availableWidth = pageWidth - margin.left - margin.right;
   console.log("====availableWidth: " + availableWidth);
 
-  const { headers, hasGroupHeaders } = generateGroupHeaders(columnDefs, printableColumns);
+  // Parse custom colors (defaults if not provided) - moved before generateGroupHeaders
+  const headerFillRGB = hexToRgb(headerFill ?? '#712d3d');
+  const headerColorRGB = hexToRgb(headerColor ?? '#ffffff');
+  const tableFontSize = fontSize ?? 10;
+
+  const { headers, hasGroupHeaders } = generateGroupHeaders(columnDefs, printableColumns, headerFillRGB, headerColorRGB);
   const { body, metadata, linkData } = buildBodyRows(printableColumns, apiUrl, undefined, linkTextColumn, linkUrlColumn);
 
   // Use numeric indices for columnStyles (jsPDF-autoTable requirement)
@@ -760,11 +771,6 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
       { align: 'center' }
     );
   };
-
-  // Parse custom colors (defaults if not provided)
-  const headerFillRGB = hexToRgb(headerFill ?? '#712d3d');
-  const headerColorRGB = hexToRgb(headerColor ?? '#ffffff');
-  const tableFontSize = fontSize ?? 10;
 
   // Create a callback to add links after cells are drawn
   const didDrawCell = (data: CellHookData): void => {
