@@ -59,6 +59,8 @@ export interface ExportOptions {
   headerColor?: string; // hex color
   fontSize?: number;
   landscapeOrientation?: boolean; // true for landscape, false for portrait
+  linkTextColumn?: string; // Column name whose text will be clickable
+  linkUrlColumn?: string; // Column name containing URLs (not printed)
 }
 
 interface PrintableColumn {
@@ -526,17 +528,31 @@ const parseRowType = (row: Record<string, unknown>): RowType => {
   return DATA_ROW_TYPES[normalized] ?? 'data';
 };
 
+interface LinkData {
+  rowIndex: number;
+  columnIndex: number;
+  url: string;
+}
+
 const buildBodyRows = (
   printableColumns: PrintableColumn[],
   rows: Record<string, unknown>[],
-  summaryRows: Record<string, unknown>[] | undefined
-): { body: RowInput[]; metadata: RowMetadata[] } => {
+  summaryRows: Record<string, unknown>[] | undefined,
+  linkTextColumn?: string,
+  linkUrlColumn?: string
+): { body: RowInput[]; metadata: RowMetadata[]; linkData: LinkData[] } => {
   const metadata: RowMetadata[] = [];
   const body: RowInput[] = [];
+  const linkData: LinkData[] = [];
+
+  // Find the column index for the link text column
+  const linkTextColIndex = linkTextColumn 
+    ? printableColumns.findIndex(col => col.dataKey === linkTextColumn)
+    : -1;
 
   const allRows = summaryRows && summaryRows.length > 0 ? [...rows, ...summaryRows] : rows;
 
-  allRows.forEach(rawRow => {
+  allRows.forEach((rawRow, rowIndex) => {
     const rowType = parseRowType(rawRow);
     metadata.push({ type: rowType });
 
@@ -555,6 +571,18 @@ const buildBodyRows = (
       const value = rawRow[column.dataKey];
       const formattedValue = formatValue(value, column.columnConfig);
       
+      // Store link data if this is the link text column and URL column is provided
+      if (linkTextColIndex === columnIndex && linkUrlColumn) {
+        const url = rawRow[linkUrlColumn];
+        if (url && typeof url === 'string' && url.trim()) {
+          linkData.push({
+            rowIndex,
+            columnIndex,
+            url: url.trim()
+          });
+        }
+      }
+      
       // Return as object with content to ensure proper rendering
       // This prevents vertical text issues
       return formattedValue;
@@ -563,7 +591,7 @@ const buildBodyRows = (
     body.push(formattedRow);
   });
 
-  return { body, metadata };
+  return { body, metadata, linkData };
 };
 
 const applyRowStyling = (
@@ -601,6 +629,8 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
     pdfExportSubtitle,
     logoBase64,
     landscapeOrientation,
+    linkTextColumn,
+    linkUrlColumn,
     headerFill,
     headerColor,
     fontSize
@@ -647,7 +677,7 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
   console.log("====availableWidth: " + availableWidth);
 
   const { headers, hasGroupHeaders } = generateGroupHeaders(columnDefs, printableColumns);
-  const { body, metadata } = buildBodyRows(printableColumns, apiUrl, undefined);
+  const { body, metadata, linkData } = buildBodyRows(printableColumns, apiUrl, undefined, linkTextColumn, linkUrlColumn);
 
   // Use numeric indices for columnStyles (jsPDF-autoTable requirement)
   const columnStyles: Record<number, { cellWidth?: number; halign?: 'left' | 'center' | 'right'; overflow?: 'linebreak' }> = {};
@@ -736,6 +766,54 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
   const headerColorRGB = hexToRgb(headerColor ?? '#ffffff');
   const tableFontSize = fontSize ?? 10;
 
+  // Create a callback to add links after cells are drawn
+  const didDrawCell = (data: CellHookData): void => {
+    // Only process body cells
+    if (data.section !== 'body') {
+      return;
+    }
+
+    // Type assertion for extended cell data that includes position and column info
+    // jsPDF-autoTable's CellHookData type doesn't include all runtime properties
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+    const cellData = data as any;
+
+    // Get column index - the data object should have column information
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const columnIndex = cellData.column?.index as number | undefined ?? -1;
+
+    if (columnIndex === -1) {
+      return;
+    }
+
+    const linkInfo = linkData.find(
+      link => link.rowIndex === data.row.index && link.columnIndex === columnIndex
+    );
+
+    if (!linkInfo?.url) {
+      return;
+    }
+
+    // Access cell position properties
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const cellX = cellData.cell.x as number | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const cellY = cellData.cell.y as number | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const cellWidth = cellData.cell.width as number | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const cellHeight = cellData.cell.height as number | undefined;
+
+    if (cellX !== undefined && cellY !== undefined && cellWidth !== undefined && cellHeight !== undefined) {
+      // Add a clickable link annotation to the cell using jsPDF's link method
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+      (doc as any).link(cellX, cellY, cellWidth, cellHeight, { url: linkInfo.url });
+
+      // Optional: Change text color to blue to indicate it's a link
+      data.cell.styles.textColor = [0, 0, 255]; // Blue color for links
+    }
+  };
+
   autoTable(doc, {
     head: headers,
     body,
@@ -769,6 +847,7 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
     theme: 'grid',
     willDrawCell: undefined,
     didParseCell: (data: CellHookData) => applyRowStyling(data, metadata),
+    didDrawCell: linkData.length > 0 ? didDrawCell : undefined,
     didDrawPage
   });
 
