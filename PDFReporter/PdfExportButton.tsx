@@ -7,6 +7,9 @@ export interface IPdfExportButtonProps {
   pdfExportTitle?: string;
   pdfExportSubtitle?: string;
   logoBase64?: string;
+  landscapeOrientation?: boolean;
+  linkTextColumn?: string;
+  linkUrlColumn?: string;
   apiUrl?: string;
   columnConfig?: string;
   columnGroups?: string;
@@ -131,13 +134,22 @@ export const PdfExportButton: React.FC<IPdfExportButtonProps> = (props) => {
           pdfExportTitle: props.pdfExportTitle?.trim(),
           pdfExportSubtitle: props.pdfExportSubtitle?.trim(),
           logoBase64: props.logoBase64?.trim(),
+          landscapeOrientation: props.landscapeOrientation,
+          linkTextColumn: props.linkTextColumn?.trim(),
+          linkUrlColumn: props.linkUrlColumn?.trim(),
           headerFill: props.headerFill?.trim(),
           headerColor: props.headerColor?.trim(),
           fontSize: props.fontSize
         };
         const doc = exportJsonToPdf(exportOptions);
         const fileName = (props.pdfFileName?.trim() ?? 'grid-export') + '.pdf';
-        doc.output('dataurlnewwindow');
+        // Try to open preview in new window - may fail with large PDFs
+        try {
+          const blobUrl = doc.output('bloburl') as string;
+          window.open(blobUrl, '_blank');
+        } catch (previewError) {
+          console.warn('Preview in new window failed (possibly due to large file size):', previewError);
+        }
         doc.save(fileName);
         // Reset after successful generation
         setTimeout(() => setIsGenerating(false), 500);

@@ -43,6 +43,9 @@ export class PDFReporter implements ComponentFramework.ReactControl<IInputs, IOu
             pdfExportTitle: context.parameters.pdfExportTitle?.raw ?? undefined,
             pdfExportSubtitle: context.parameters.pdfExportSubtitle?.raw ?? undefined,
             logoBase64: context.parameters.logoBase64?.raw ?? undefined,
+            landscapeOrientation: context.parameters.landscapeOrientation?.raw ?? undefined,
+            linkTextColumn: context.parameters.linkTextColumn?.raw ?? undefined,
+            linkUrlColumn: context.parameters.linkUrlColumn?.raw ?? undefined,
             
             // Data Sources (ag-grid format)
             apiUrl: context.parameters.apiUrl?.raw ?? undefined,
