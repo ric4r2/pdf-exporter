@@ -137,7 +137,13 @@ export const PdfExportButton: React.FC<IPdfExportButtonProps> = (props) => {
         };
         const doc = exportJsonToPdf(exportOptions);
         const fileName = (props.pdfFileName?.trim() ?? 'grid-export') + '.pdf';
-        doc.output('dataurlnewwindow');
+        // Try to open preview in new window - may fail with large PDFs
+        try {
+          const blobUrl = doc.output('bloburl') as string;
+          window.open(blobUrl, '_blank');
+        } catch (previewError) {
+          console.warn('Preview in new window failed (possibly due to large file size):', previewError);
+        }
         doc.save(fileName);
         // Reset after successful generation
         setTimeout(() => setIsGenerating(false), 500);
