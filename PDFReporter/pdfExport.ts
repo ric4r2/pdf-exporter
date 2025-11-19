@@ -58,6 +58,7 @@ export interface ExportOptions {
   headerFill?: string; // hex color
   headerColor?: string; // hex color
   fontSize?: number;
+  landscapeOrientation?: boolean; // true for landscape, false for portrait
 }
 
 interface PrintableColumn {
@@ -599,6 +600,7 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
     pdfExportTitle,
     pdfExportSubtitle,
     logoBase64,
+    landscapeOrientation,
     headerFill,
     headerColor,
     fontSize
@@ -633,7 +635,9 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
   const logoToUse = logoBase64?.trim() ?? defaultLogoBase64;
   const preparedLogo = sanitizeBase64(logoToUse);
 
-  const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' }) as JsPDFWithInternal;
+  // Use landscapeOrientation parameter, default to true (landscape) if not specified
+  const orientation = (landscapeOrientation ?? true) ? 'landscape' : 'portrait';
+  const doc = new jsPDF({ orientation, unit: 'pt', format: 'letter' }) as JsPDFWithInternal;
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   // Increased top margin to 100 to prevent date from overlapping with table
