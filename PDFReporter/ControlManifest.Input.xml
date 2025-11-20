@@ -27,6 +27,7 @@
   <property name="landscapeOrientation" display-name-key="Landscape Orientation" description-key="If true, PDF will be in landscape orientation; if false, portrait orientation" of-type="TwoOptions" usage="input" required="false" default-value="true" />
   <property name="linkTextColumn" display-name-key="Link Text Column" description-key="Column name whose text will be displayed as a clickable link (optional)" of-type="SingleLine.Text" usage="input" required="false" />
   <property name="linkUrlColumn" display-name-key="Link URL Column" description-key="Column name containing URLs for the link text column (optional, not printed)" of-type="SingleLine.Text" usage="input" required="false" />
+  <property name="pivotColumn" display-name-key="Pivot Column" description-key="Column name to group rows by" of-type="SingleLine.Text" usage="input" required="false" />
 
   
   <!-- Data Sources (ag-grid format) -->

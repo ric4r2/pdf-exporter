@@ -61,6 +61,7 @@ export interface ExportOptions {
   landscapeOrientation?: boolean; // true for landscape, false for portrait
   linkTextColumn?: string; // Column name whose text will be clickable
   linkUrlColumn?: string; // Column name containing URLs (not printed)
+  pivotColumn?: string; // Column name to group rows by
 }
 
 interface PrintableColumn {
@@ -538,7 +539,8 @@ const buildBodyRows = (
   rows: Record<string, unknown>[],
   summaryRows: Record<string, unknown>[] | undefined,
   linkTextColumn?: string,
-  linkUrlColumn?: string
+  linkUrlColumn?: string,
+  pivotColumn?: string
 ): { body: RowInput[]; metadata: RowMetadata[]; linkData: LinkData[] } => {
   const metadata: RowMetadata[] = [];
   const body: RowInput[] = [];
@@ -556,8 +558,17 @@ const buildBodyRows = (
     metadata.push({ type: rowType });
 
     const formattedRow = printableColumns.map((column, columnIndex) => {
-      if (rowType === 'groupHeader' && columnIndex > 0) {
-        return '';
+      if (rowType === 'groupHeader') {
+        if (pivotColumn) {
+          if (column.dataKey === pivotColumn) {
+            const value = rawRow[pivotColumn];
+            return formatValue(value, column.columnConfig);
+          }
+          return '';
+        }
+        if (columnIndex > 0) {
+          return '';
+        }
       }
       if (rowType === 'groupHeader' && columnIndex === 0) {
         const label = (rawRow.__groupLabel ?? rawRow.__groupName ?? rawRow.groupLabel ?? rawRow.groupName) as string | undefined;
@@ -640,6 +651,7 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
     landscapeOrientation,
     linkTextColumn,
     linkUrlColumn,
+    pivotColumn,
     headerFill,
     headerColor,
     fontSize
@@ -680,8 +692,41 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
   const headerColorRGB = hexToRgb(headerColor ?? '#ffffff');
   const tableFontSize = fontSize ?? 10;
 
+  let processedRows = [...apiUrl];
+  if (pivotColumn) {
+    processedRows.sort((a, b) => {
+      const valA = a[pivotColumn] as string | number | undefined;
+      const valB = b[pivotColumn] as string | number | undefined;
+      
+      if (valA === valB) return 0;
+      if (valA === undefined || valA === null) return 1;
+      if (valB === undefined || valB === null) return -1;
+      
+      if (valA < valB) return -1;
+      if (valA > valB) return 1;
+      return 0;
+    });
+
+    const groupedRows: Record<string, unknown>[] = [];
+    const uniqueSymbol = Symbol('initial');
+    let lastValue: unknown = uniqueSymbol;
+    
+    processedRows.forEach(row => {
+      const currentValue = row[pivotColumn];
+      if (currentValue !== lastValue) {
+        groupedRows.push({
+          __rowType: 'groupHeader',
+          [pivotColumn]: currentValue
+        });
+        lastValue = currentValue;
+      }
+      groupedRows.push(row);
+    });
+    processedRows = groupedRows;
+  }
+
   const { headers, hasGroupHeaders } = generateGroupHeaders(columnDefs, printableColumns, headerFillRGB, headerColorRGB);
-  const { body, metadata, linkData } = buildBodyRows(printableColumns, apiUrl, undefined, linkTextColumn, linkUrlColumn);
+  const { body, metadata, linkData } = buildBodyRows(printableColumns, processedRows, undefined, linkTextColumn, linkUrlColumn, pivotColumn);
 
   const columnStyles: Record<number, { cellWidth?: number; halign?: 'left' | 'center' | 'right'; overflow?: 'linebreak' }> = {};
 
