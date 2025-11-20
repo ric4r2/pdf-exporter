@@ -92,7 +92,7 @@ interface JsPDFWithInternal extends JsPDFInstance {
 }
 
 const TOTAL_ROW_COLOR: [number, number, number] = [230, 230, 230];
-const GROUP_ROW_COLOR: [number, number, number] = [242, 242, 242];
+const GROUP_ROW_COLOR: [number, number, number] = [225, 225, 225];
 const EVEN_ROW_COLOR: [number, number, number] = [255, 255, 255];
 const ODD_ROW_COLOR: [number, number, number] = [249, 249, 249];
 
