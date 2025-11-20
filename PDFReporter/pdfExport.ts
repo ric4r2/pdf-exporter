@@ -216,7 +216,6 @@ const buildPrintableColumns = (
     flatDefs = getFlatColumns(columnDefs);
   }
 
-  // Fallback to configs if no defs were supplied
   if (flatDefs.length === 0) {
     flatDefs = columnConfigs.map(config => ({
       field: config.NombreColumna,
@@ -267,7 +266,6 @@ const buildPrintableColumns = (
     })
     .filter((column): column is PrintableColumn => !!column);
 
-  // Include configs that did not appear in the defs (custom fields)
   const columnsFromConfigs = columnConfigs
     .filter(config => !seen.has(config.NombreColumna) && config.Print?.Printable !== false)
     .map(config => {
@@ -315,7 +313,6 @@ const generateGroupHeaders = (
   // Use provided colors or defaults
   const fillColor = headerFillRGB ?? [113, 45, 61];
   const textColor = headerColorRGB ?? [255, 255, 255];
-
   const groupPathCache = new Map<string, string | undefined>();
 
   const findGroupName = (defs: ColumnDefinition[], dataKey: string): string | undefined => {
@@ -368,7 +365,6 @@ const generateGroupHeaders = (
   for (let index = 0; index < groupNames.length; ) {
     const currentName = groupNames[index];
     if (!currentName) {
-      // Use same color as normal headers for non-grouped columns
       groupHeaderRow.push({ content: '', colSpan: 1, styles: { fillColor: fillColor } });
       index += 1;
       continue;
@@ -412,14 +408,11 @@ const formatValue = (value: unknown, columnConfig?: ColumnConfig): string => {
     return '';
   }
 
-  // Helper to safely stringify any value
   const safeStringify = (val: unknown): string => {
     if (typeof val === 'object' && val !== null) {
       return JSON.stringify(val);
     }
-    // Clean string to remove problematic characters that might cause vertical text
     const str = String(val);
-    // Remove or replace problematic characters (control characters and non-printable)
     // eslint-disable-next-line no-control-regex
     return str.replace(/[\u0000-\u001F\u007F-\u009F]/g, '').trim();
   };
@@ -552,7 +545,7 @@ const buildBodyRows = (
   const linkData: LinkData[] = [];
 
   // Find the column index for the link text column
-  const linkTextColIndex = linkTextColumn 
+  const linkTextColIndex = linkTextColumn
     ? printableColumns.findIndex(col => col.dataKey === linkTextColumn)
     : -1;
 
@@ -577,7 +570,6 @@ const buildBodyRows = (
       const value = rawRow[column.dataKey];
       const formattedValue = formatValue(value, column.columnConfig);
       
-      // Store link data if this is the link text column and URL column is provided
       if (linkTextColIndex === columnIndex && linkUrlColumn) {
         const url = rawRow[linkUrlColumn];
         if (url && typeof url === 'string' && url.trim()) {
@@ -589,8 +581,6 @@ const buildBodyRows = (
         }
       }
       
-      // Return as object with content to ensure proper rendering
-      // This prevents vertical text issues
       return formattedValue;
     });
 
@@ -602,7 +592,8 @@ const buildBodyRows = (
 
 const applyRowStyling = (
   data: CellHookData,
-  metadata: RowMetadata[]
+  metadata: RowMetadata[],
+  linkData: LinkData[]
 ): void => {
   if (data.section !== 'body') {
     return;
@@ -624,6 +615,18 @@ const applyRowStyling = (
     data.cell.styles.fillColor = TOTAL_ROW_COLOR;
     data.cell.styles.fontStyle = 'bold';
   }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+  const columnIndex = (data as any).column?.index as number | undefined;
+  if (columnIndex !== undefined) {
+    const hasLink = linkData.some(
+      link => link.rowIndex === data.row.index && link.columnIndex === columnIndex
+    );
+    if (hasLink) {
+      data.cell.styles.textColor = [0, 0, 255];
+      data.cell.styles.fontStyle = 'bold';
+    }
+  }
 };
 
 export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
@@ -642,7 +645,6 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
     fontSize
   } = options;
 
-  // Validate required inputs
   if (!apiUrl || apiUrl.length === 0) {
     throw new Error('No se proporcionaron datos (apiUrl). Verifique la entrada.');
   }
@@ -650,8 +652,6 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
   if (!columnConfig || columnConfig.length === 0) {
     throw new Error('No se proporcionó la configuración de columnas (columnConfig). Verifique la entrada.');
   }
-
-  // Convert columnGroups to columnDefs format if provided
   const columnDefs: ColumnDefinition[] | undefined = columnGroups?.map(group => ({
     headerName: group.headerName,
     children: group.children.map(childName => ({
@@ -667,22 +667,15 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
 
   const documentTitle = pdfExportTitle?.trim() ?? 'Grid Export';
   const documentSubtitle = pdfExportSubtitle?.trim();
-  // Use custom logo if provided, otherwise use the default from logo.ts
   const logoToUse = logoBase64?.trim() ?? defaultLogoBase64;
   const preparedLogo = sanitizeBase64(logoToUse);
 
-  // Use landscapeOrientation parameter, default to true (landscape) if not specified
   const orientation = (landscapeOrientation ?? true) ? 'landscape' : 'portrait';
   const doc = new jsPDF({ orientation, unit: 'pt', format: 'letter' }) as JsPDFWithInternal;
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  // Increased top margin to 100 to prevent date from overlapping with table
-  // Reduced side margins from 36 to 30 to give more space for table content
   const margin = { top: 100, right: 30, bottom: 50, left: 30 };
   const availableWidth = pageWidth - margin.left - margin.right;
-  console.log("====availableWidth: " + availableWidth);
-
-  // Parse custom colors (defaults if not provided) - moved before generateGroupHeaders
   const headerFillRGB = hexToRgb(headerFill ?? '#712d3d');
   const headerColorRGB = hexToRgb(headerColor ?? '#ffffff');
   const tableFontSize = fontSize ?? 10;
@@ -690,7 +683,6 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
   const { headers, hasGroupHeaders } = generateGroupHeaders(columnDefs, printableColumns, headerFillRGB, headerColorRGB);
   const { body, metadata, linkData } = buildBodyRows(printableColumns, apiUrl, undefined, linkTextColumn, linkUrlColumn);
 
-  // Use numeric indices for columnStyles (jsPDF-autoTable requirement)
   const columnStyles: Record<number, { cellWidth?: number; halign?: 'left' | 'center' | 'right'; overflow?: 'linebreak' }> = {};
 
   printableColumns.forEach((column, index) => {
@@ -714,22 +706,16 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
       halign: alignment,
       overflow: 'linebreak'
     };
-
-    console.log(`Column [${index}] ${column.dataKey}: WidthPercentage=${widthPercentage}, cellWidth=${columnStyles[index].cellWidth}`);
   });
-
-
 
   const currentDate = new Date().toLocaleDateString('es-MX');
 
   const didDrawPage = (data: CellHookData): void => {
     const pageNumber: number = doc.internal.getNumberOfPages();
 
-    // Header background - extended to accommodate larger margin
     doc.setFillColor(255, 255, 255);
     doc.rect(0, 0, pageWidth, margin.top - 10, 'F');
 
-    // Always draw the logo from logo.ts
     if (preparedLogo) {
       const logoWidth = 120;
       const logoHeight = logoWidth * (4972 / 16000);
@@ -755,7 +741,6 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    // Positioned date further down to avoid overlap with table (at 68 or 84)
     doc.text(`Fecha: ${currentDate}`, margin.left, documentSubtitle ? 68 : 50);
 
     // Footer
@@ -772,19 +757,14 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
     );
   };
 
-  // Create a callback to add links after cells are drawn
   const didDrawCell = (data: CellHookData): void => {
-    // Only process body cells
     if (data.section !== 'body') {
       return;
     }
 
-    // Type assertion for extended cell data that includes position and column info
-    // jsPDF-autoTable's CellHookData type doesn't include all runtime properties
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
     const cellData = data as any;
 
-    // Get column index - the data object should have column information
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const columnIndex = cellData.column?.index as number | undefined ?? -1;
 
@@ -800,7 +780,6 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
       return;
     }
 
-    // Access cell position properties
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const cellX = cellData.cell.x as number | undefined;
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
@@ -811,12 +790,8 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
     const cellHeight = cellData.cell.height as number | undefined;
 
     if (cellX !== undefined && cellY !== undefined && cellWidth !== undefined && cellHeight !== undefined) {
-      // Add a clickable link annotation to the cell using jsPDF's link method
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
       (doc as any).link(cellX, cellY, cellWidth, cellHeight, { url: linkInfo.url });
-
-      // Optional: Change text color to blue to indicate it's a link
-      data.cell.styles.textColor = [0, 0, 255]; // Blue color for links
     }
   };
 
@@ -852,14 +827,12 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
     rowPageBreak: 'avoid',
     theme: 'grid',
     willDrawCell: undefined,
-    didParseCell: (data: CellHookData) => applyRowStyling(data, metadata),
+    didParseCell: (data: CellHookData) => applyRowStyling(data, metadata, linkData),
     didDrawCell: linkData.length > 0 ? didDrawCell : undefined,
     didDrawPage
   });
 
   doc.putTotalPages(TOTAL_PAGES_PLACEHOLDER);
-
-  // Remove footnote logic - not needed for ag-grid format
 
   return doc;
 };
