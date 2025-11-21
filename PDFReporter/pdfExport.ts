@@ -47,10 +47,19 @@ export interface ColumnGroup {
   openByDefault?: boolean;
 }
 
+export interface AggFuncConfig {
+  ColumnConfigName: string;
+  aggFuncColumnsAllowed?: boolean;
+  aggFuncColumnsDefault?: string;
+  RowGroupColumnsDefault?: boolean;
+  GroupColumnsDefault?: boolean;
+}
+
 export interface ExportOptions {
   apiUrl: Record<string, unknown>[]; // Array of row data
   columnConfig: ColumnConfig[]; // Column configuration
   columnGroups?: ColumnGroup[]; // Optional grouped columns
+  aggFuncConfig?: AggFuncConfig[]; // Aggregation configuration
   pdfFileName?: string;
   pdfExportTitle?: string;
   pdfExportSubtitle?: string;
@@ -61,6 +70,7 @@ export interface ExportOptions {
   landscapeOrientation?: boolean; // true for landscape, false for portrait
   linkTextColumn?: string; // Column name whose text will be clickable
   linkUrlColumn?: string; // Column name containing URLs (not printed)
+  pivotColumn?: string; // Column name to group rows by
 }
 
 interface PrintableColumn {
@@ -91,7 +101,7 @@ interface JsPDFWithInternal extends JsPDFInstance {
 }
 
 const TOTAL_ROW_COLOR: [number, number, number] = [230, 230, 230];
-const GROUP_ROW_COLOR: [number, number, number] = [242, 242, 242];
+const GROUP_ROW_COLOR: [number, number, number] = [225, 225, 225];
 const EVEN_ROW_COLOR: [number, number, number] = [255, 255, 255];
 const ODD_ROW_COLOR: [number, number, number] = [249, 249, 249];
 
@@ -216,7 +226,6 @@ const buildPrintableColumns = (
     flatDefs = getFlatColumns(columnDefs);
   }
 
-  // Fallback to configs if no defs were supplied
   if (flatDefs.length === 0) {
     flatDefs = columnConfigs.map(config => ({
       field: config.NombreColumna,
@@ -267,7 +276,6 @@ const buildPrintableColumns = (
     })
     .filter((column): column is PrintableColumn => !!column);
 
-  // Include configs that did not appear in the defs (custom fields)
   const columnsFromConfigs = columnConfigs
     .filter(config => !seen.has(config.NombreColumna) && config.Print?.Printable !== false)
     .map(config => {
@@ -315,7 +323,6 @@ const generateGroupHeaders = (
   // Use provided colors or defaults
   const fillColor = headerFillRGB ?? [113, 45, 61];
   const textColor = headerColorRGB ?? [255, 255, 255];
-
   const groupPathCache = new Map<string, string | undefined>();
 
   const findGroupName = (defs: ColumnDefinition[], dataKey: string): string | undefined => {
@@ -368,7 +375,6 @@ const generateGroupHeaders = (
   for (let index = 0; index < groupNames.length; ) {
     const currentName = groupNames[index];
     if (!currentName) {
-      // Use same color as normal headers for non-grouped columns
       groupHeaderRow.push({ content: '', colSpan: 1, styles: { fillColor: fillColor } });
       index += 1;
       continue;
@@ -412,14 +418,11 @@ const formatValue = (value: unknown, columnConfig?: ColumnConfig): string => {
     return '';
   }
 
-  // Helper to safely stringify any value
   const safeStringify = (val: unknown): string => {
     if (typeof val === 'object' && val !== null) {
       return JSON.stringify(val);
     }
-    // Clean string to remove problematic characters that might cause vertical text
     const str = String(val);
-    // Remove or replace problematic characters (control characters and non-printable)
     // eslint-disable-next-line no-control-regex
     return str.replace(/[\u0000-\u001F\u007F-\u009F]/g, '').trim();
   };
@@ -545,14 +548,15 @@ const buildBodyRows = (
   rows: Record<string, unknown>[],
   summaryRows: Record<string, unknown>[] | undefined,
   linkTextColumn?: string,
-  linkUrlColumn?: string
+  linkUrlColumn?: string,
+  pivotColumn?: string
 ): { body: RowInput[]; metadata: RowMetadata[]; linkData: LinkData[] } => {
   const metadata: RowMetadata[] = [];
   const body: RowInput[] = [];
   const linkData: LinkData[] = [];
 
   // Find the column index for the link text column
-  const linkTextColIndex = linkTextColumn 
+  const linkTextColIndex = linkTextColumn
     ? printableColumns.findIndex(col => col.dataKey === linkTextColumn)
     : -1;
 
@@ -563,8 +567,25 @@ const buildBodyRows = (
     metadata.push({ type: rowType });
 
     const formattedRow = printableColumns.map((column, columnIndex) => {
-      if (rowType === 'groupHeader' && columnIndex > 0) {
-        return '';
+      if (rowType === 'groupHeader') {
+        if (pivotColumn) {
+          if (column.dataKey === pivotColumn) {
+            // For the pivot column, we expect the value to be already formatted as "Value - (Count)"
+            // or we format it here if it's just the value.
+            // But our new logic will put the formatted string in the row data.
+            // We use String() to ensure we don't try to number-format the "Value - (Count)" string.
+            return String(rawRow[pivotColumn]);
+          }
+          // For other columns, if there is an aggregation value, format and return it.
+          const val = rawRow[column.dataKey];
+          if (val !== undefined && val !== null) {
+             return formatValue(val, column.columnConfig);
+          }
+          return '';
+        }
+        if (columnIndex > 0) {
+          return '';
+        }
       }
       if (rowType === 'groupHeader' && columnIndex === 0) {
         const label = (rawRow.__groupLabel ?? rawRow.__groupName ?? rawRow.groupLabel ?? rawRow.groupName) as string | undefined;
@@ -577,7 +598,6 @@ const buildBodyRows = (
       const value = rawRow[column.dataKey];
       const formattedValue = formatValue(value, column.columnConfig);
       
-      // Store link data if this is the link text column and URL column is provided
       if (linkTextColIndex === columnIndex && linkUrlColumn) {
         const url = rawRow[linkUrlColumn];
         if (url && typeof url === 'string' && url.trim()) {
@@ -589,8 +609,6 @@ const buildBodyRows = (
         }
       }
       
-      // Return as object with content to ensure proper rendering
-      // This prevents vertical text issues
       return formattedValue;
     });
 
@@ -602,7 +620,8 @@ const buildBodyRows = (
 
 const applyRowStyling = (
   data: CellHookData,
-  metadata: RowMetadata[]
+  metadata: RowMetadata[],
+  linkData: LinkData[]
 ): void => {
   if (data.section !== 'body') {
     return;
@@ -624,6 +643,67 @@ const applyRowStyling = (
     data.cell.styles.fillColor = TOTAL_ROW_COLOR;
     data.cell.styles.fontStyle = 'bold';
   }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+  const columnIndex = (data as any).column?.index as number | undefined;
+  if (columnIndex !== undefined) {
+    const hasLink = linkData.some(
+      link => link.rowIndex === data.row.index && link.columnIndex === columnIndex
+    );
+    if (hasLink) {
+      data.cell.styles.textColor = [0, 0, 255];
+      data.cell.styles.fontStyle = 'bold';
+    }
+  }
+};
+
+const calculateAggregation = (rows: Record<string, unknown>[], config: AggFuncConfig[]): Record<string, unknown> => {
+  const result: Record<string, unknown> = {};
+  
+  config.forEach(colConfig => {
+    if (!colConfig.aggFuncColumnsAllowed || !colConfig.aggFuncColumnsDefault) return;
+    
+    const key = colConfig.ColumnConfigName;
+    const func = colConfig.aggFuncColumnsDefault.toLowerCase();
+    
+    const values = rows.map(r => r[key]).filter(v => v !== null && v !== undefined && v !== '');
+    
+    let aggValue: number | string | null = null;
+    
+    if (func === 'count') {
+      aggValue = values.length;
+    } else {
+      // For numeric operations
+      const numericValues = values.map(v => {
+        if (typeof v === 'number') return v;
+        const s = String(v).replace(/[^0-9.-]+/g, '');
+        return parseFloat(s);
+      }).filter(n => !isNaN(n));
+      
+      if (numericValues.length > 0) {
+        switch (func) {
+          case 'sum':
+            aggValue = numericValues.reduce((a, b) => a + b, 0);
+            break;
+          case 'avg':
+            aggValue = numericValues.reduce((a, b) => a + b, 0) / numericValues.length;
+            break;
+          case 'min':
+            aggValue = Math.min(...numericValues);
+            break;
+          case 'max':
+            aggValue = Math.max(...numericValues);
+            break;
+        }
+      }
+    }
+    
+    if (aggValue !== null) {
+      result[key] = aggValue;
+    }
+  });
+  
+  return result;
 };
 
 export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
@@ -631,18 +711,19 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
     apiUrl,
     columnConfig,
     columnGroups,
+    aggFuncConfig,
     pdfExportTitle,
     pdfExportSubtitle,
     logoBase64,
     landscapeOrientation,
     linkTextColumn,
     linkUrlColumn,
+    pivotColumn,
     headerFill,
     headerColor,
     fontSize
   } = options;
 
-  // Validate required inputs
   if (!apiUrl || apiUrl.length === 0) {
     throw new Error('No se proporcionaron datos (apiUrl). Verifique la entrada.');
   }
@@ -650,8 +731,6 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
   if (!columnConfig || columnConfig.length === 0) {
     throw new Error('No se proporcionó la configuración de columnas (columnConfig). Verifique la entrada.');
   }
-
-  // Convert columnGroups to columnDefs format if provided
   const columnDefs: ColumnDefinition[] | undefined = columnGroups?.map(group => ({
     headerName: group.headerName,
     children: group.children.map(childName => ({
@@ -667,30 +746,92 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
 
   const documentTitle = pdfExportTitle?.trim() ?? 'Grid Export';
   const documentSubtitle = pdfExportSubtitle?.trim();
-  // Use custom logo if provided, otherwise use the default from logo.ts
   const logoToUse = logoBase64?.trim() ?? defaultLogoBase64;
   const preparedLogo = sanitizeBase64(logoToUse);
 
-  // Use landscapeOrientation parameter, default to true (landscape) if not specified
   const orientation = (landscapeOrientation ?? true) ? 'landscape' : 'portrait';
   const doc = new jsPDF({ orientation, unit: 'pt', format: 'letter' }) as JsPDFWithInternal;
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  // Increased top margin to 100 to prevent date from overlapping with table
-  // Reduced side margins from 36 to 30 to give more space for table content
   const margin = { top: 100, right: 30, bottom: 50, left: 30 };
   const availableWidth = pageWidth - margin.left - margin.right;
-  console.log("====availableWidth: " + availableWidth);
-
-  // Parse custom colors (defaults if not provided) - moved before generateGroupHeaders
   const headerFillRGB = hexToRgb(headerFill ?? '#712d3d');
   const headerColorRGB = hexToRgb(headerColor ?? '#ffffff');
-  const tableFontSize = fontSize ?? 10;
+  const tableFontSize = fontSize ?? 8;
+
+  let processedRows = [...apiUrl];
+  if (pivotColumn) {
+    processedRows.sort((a, b) => {
+      const valA = a[pivotColumn] as string | number | undefined;
+      const valB = b[pivotColumn] as string | number | undefined;
+      
+      if (valA === valB) return 0;
+      if (valA === undefined || valA === null) return 1;
+      if (valB === undefined || valB === null) return -1;
+      
+      if (valA < valB) return -1;
+      if (valA > valB) return 1;
+      return 0;
+    });
+
+    const groupedRows: Record<string, unknown>[] = [];
+    const uniqueSymbol = Symbol('initial');
+    let lastValue: unknown = uniqueSymbol;
+    let currentGroupRows: Record<string, unknown>[] = [];
+    
+    processedRows.forEach((row, index) => {
+      const currentValue = row[pivotColumn];
+      if (currentValue !== lastValue) {
+        // Process previous group
+        if (lastValue !== uniqueSymbol && currentGroupRows.length > 0) {
+          const count = currentGroupRows.length;
+          let groupHeaderRow: Record<string, unknown> = {
+            __rowType: 'groupHeader',
+            [pivotColumn]: `${String(lastValue)} - (${count})`
+          };
+
+          if (aggFuncConfig && aggFuncConfig.length > 0) {
+            const groupAggs = calculateAggregation(currentGroupRows, aggFuncConfig);
+            groupHeaderRow = { ...groupHeaderRow, ...groupAggs };
+          }
+          
+          groupedRows.push(groupHeaderRow);
+          groupedRows.push(...currentGroupRows);
+        }
+
+        lastValue = currentValue;
+        currentGroupRows = [];
+      }
+      currentGroupRows.push(row);
+
+      // Process last group
+      if (index === processedRows.length - 1 && currentGroupRows.length > 0) {
+        const count = currentGroupRows.length;
+        let groupHeaderRow: Record<string, unknown> = {
+          __rowType: 'groupHeader',
+          [pivotColumn]: `${String(currentValue)} - (${count})`
+        };
+
+        if (aggFuncConfig && aggFuncConfig.length > 0) {
+          const groupAggs = calculateAggregation(currentGroupRows, aggFuncConfig);
+          groupHeaderRow = { ...groupHeaderRow, ...groupAggs };
+        }
+        
+        groupedRows.push(groupHeaderRow);
+        groupedRows.push(...currentGroupRows);
+      }
+    });
+    processedRows = groupedRows;
+  }
+
+  if (aggFuncConfig && aggFuncConfig.length > 0) {
+    const grandTotal = calculateAggregation(apiUrl, aggFuncConfig);
+    processedRows.push({ ...grandTotal, __rowType: 'total' });
+  }
 
   const { headers, hasGroupHeaders } = generateGroupHeaders(columnDefs, printableColumns, headerFillRGB, headerColorRGB);
-  const { body, metadata, linkData } = buildBodyRows(printableColumns, apiUrl, undefined, linkTextColumn, linkUrlColumn);
+  const { body, metadata, linkData } = buildBodyRows(printableColumns, processedRows, undefined, linkTextColumn, linkUrlColumn, pivotColumn);
 
-  // Use numeric indices for columnStyles (jsPDF-autoTable requirement)
   const columnStyles: Record<number, { cellWidth?: number; halign?: 'left' | 'center' | 'right'; overflow?: 'linebreak' }> = {};
 
   printableColumns.forEach((column, index) => {
@@ -714,22 +855,16 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
       halign: alignment,
       overflow: 'linebreak'
     };
-
-    console.log(`Column [${index}] ${column.dataKey}: WidthPercentage=${widthPercentage}, cellWidth=${columnStyles[index].cellWidth}`);
   });
-
-
 
   const currentDate = new Date().toLocaleDateString('es-MX');
 
   const didDrawPage = (data: CellHookData): void => {
     const pageNumber: number = doc.internal.getNumberOfPages();
 
-    // Header background - extended to accommodate larger margin
     doc.setFillColor(255, 255, 255);
     doc.rect(0, 0, pageWidth, margin.top - 10, 'F');
 
-    // Always draw the logo from logo.ts
     if (preparedLogo) {
       const logoWidth = 120;
       const logoHeight = logoWidth * (4972 / 16000);
@@ -755,7 +890,6 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    // Positioned date further down to avoid overlap with table (at 68 or 84)
     doc.text(`Fecha: ${currentDate}`, margin.left, documentSubtitle ? 68 : 50);
 
     // Footer
@@ -772,19 +906,14 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
     );
   };
 
-  // Create a callback to add links after cells are drawn
   const didDrawCell = (data: CellHookData): void => {
-    // Only process body cells
     if (data.section !== 'body') {
       return;
     }
 
-    // Type assertion for extended cell data that includes position and column info
-    // jsPDF-autoTable's CellHookData type doesn't include all runtime properties
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
     const cellData = data as any;
 
-    // Get column index - the data object should have column information
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const columnIndex = cellData.column?.index as number | undefined ?? -1;
 
@@ -800,7 +929,6 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
       return;
     }
 
-    // Access cell position properties
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const cellX = cellData.cell.x as number | undefined;
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
@@ -811,12 +939,8 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
     const cellHeight = cellData.cell.height as number | undefined;
 
     if (cellX !== undefined && cellY !== undefined && cellWidth !== undefined && cellHeight !== undefined) {
-      // Add a clickable link annotation to the cell using jsPDF's link method
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
       (doc as any).link(cellX, cellY, cellWidth, cellHeight, { url: linkInfo.url });
-
-      // Optional: Change text color to blue to indicate it's a link
-      data.cell.styles.textColor = [0, 0, 255]; // Blue color for links
     }
   };
 
@@ -852,14 +976,12 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
     rowPageBreak: 'avoid',
     theme: 'grid',
     willDrawCell: undefined,
-    didParseCell: (data: CellHookData) => applyRowStyling(data, metadata),
+    didParseCell: (data: CellHookData) => applyRowStyling(data, metadata, linkData),
     didDrawCell: linkData.length > 0 ? didDrawCell : undefined,
     didDrawPage
   });
 
   doc.putTotalPages(TOTAL_PAGES_PLACEHOLDER);
-
-  // Remove footnote logic - not needed for ag-grid format
 
   return doc;
 };

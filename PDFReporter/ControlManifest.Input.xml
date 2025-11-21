@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <manifest>
-  <control namespace="PDFReporter" constructor="PDFReporter" version="1.1.1" display-name-key="PDFReporter" description-key="PDFReporter description" control-type="virtual" >
+  <control namespace="PDFReporter" constructor="PDFReporter" version="1.2.0" display-name-key="PDFReporter" description-key="PDFReporter description" control-type="virtual" >
     <!--external-service-usage node declares whether this 3rd party PCF control is using external service or not, if yes, this control will be considered as premium and please also add the external domain it is using.
     If it is not using any external service, please set the enabled="false" and DO NOT add any domain below. The "enabled" will be false by default.
     Example1:
@@ -27,6 +27,8 @@
   <property name="landscapeOrientation" display-name-key="Landscape Orientation" description-key="If true, PDF will be in landscape orientation; if false, portrait orientation" of-type="TwoOptions" usage="input" required="false" default-value="true" />
   <property name="linkTextColumn" display-name-key="Link Text Column" description-key="Column name whose text will be displayed as a clickable link (optional)" of-type="SingleLine.Text" usage="input" required="false" />
   <property name="linkUrlColumn" display-name-key="Link URL Column" description-key="Column name containing URLs for the link text column (optional, not printed)" of-type="SingleLine.Text" usage="input" required="false" />
+  <property name="pivotColumn" display-name-key="Pivot Column" description-key="Column name to group rows by" of-type="SingleLine.Text" usage="input" required="false" />
+  <property name="aggFuncConfig" display-name-key="Aggregation Function Config (JSON)" description-key="JSON array with aggregation function configuration" of-type="Multiple" usage="input" required="false" />
 
   
   <!-- Data Sources (ag-grid format) -->
@@ -37,7 +39,7 @@
   <!-- PDF Table Styling -->
   <property name="headerFill" display-name-key="Header Fill Color" description-key="Background color for table headers (hex format)" of-type="SingleLine.Text" usage="input" required="false" default-value="#712d3d" />
   <property name="headerColor" display-name-key="Header Text Color" description-key="Text color for table headers (hex format)" of-type="SingleLine.Text" usage="input" required="false" default-value="#ffffff" />
-  <property name="fontSize" display-name-key="Font Size" description-key="Font size for table content in points" of-type="Whole.None" usage="input" required="false" default-value="10" />
+  <property name="fontSize" display-name-key="Font Size" description-key="Font size for table content in points" of-type="Whole.None" usage="input" required="false" default-value="8" />
 
   <!-- Button Styling (Normal State) -->
   <property name="fill" display-name-key="Button Fill Color" description-key="Background color of the button (hex format)" of-type="SingleLine.Text" usage="input" required="false" default-value="#712d3d" />
