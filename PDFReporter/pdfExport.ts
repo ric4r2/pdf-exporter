@@ -47,10 +47,19 @@ export interface ColumnGroup {
   openByDefault?: boolean;
 }
 
+export interface AggFuncConfig {
+  ColumnConfigName: string;
+  aggFuncColumnsAllowed?: boolean;
+  aggFuncColumnsDefault?: string;
+  RowGroupColumnsDefault?: boolean;
+  GroupColumnsDefault?: boolean;
+}
+
 export interface ExportOptions {
   apiUrl: Record<string, unknown>[]; // Array of row data
   columnConfig: ColumnConfig[]; // Column configuration
   columnGroups?: ColumnGroup[]; // Optional grouped columns
+  aggFuncConfig?: AggFuncConfig[]; // Aggregation configuration
   pdfFileName?: string;
   pdfExportTitle?: string;
   pdfExportSubtitle?: string;
@@ -561,8 +570,16 @@ const buildBodyRows = (
       if (rowType === 'groupHeader') {
         if (pivotColumn) {
           if (column.dataKey === pivotColumn) {
-            const value = rawRow[pivotColumn];
-            return formatValue(value, column.columnConfig);
+            // For the pivot column, we expect the value to be already formatted as "Value - (Count)"
+            // or we format it here if it's just the value.
+            // But our new logic will put the formatted string in the row data.
+            // We use String() to ensure we don't try to number-format the "Value - (Count)" string.
+            return String(rawRow[pivotColumn]);
+          }
+          // For other columns, if there is an aggregation value, format and return it.
+          const val = rawRow[column.dataKey];
+          if (val !== undefined && val !== null) {
+             return formatValue(val, column.columnConfig);
           }
           return '';
         }
@@ -640,11 +657,61 @@ const applyRowStyling = (
   }
 };
 
+const calculateAggregation = (rows: Record<string, unknown>[], config: AggFuncConfig[]): Record<string, unknown> => {
+  const result: Record<string, unknown> = {};
+  
+  config.forEach(colConfig => {
+    if (!colConfig.aggFuncColumnsAllowed || !colConfig.aggFuncColumnsDefault) return;
+    
+    const key = colConfig.ColumnConfigName;
+    const func = colConfig.aggFuncColumnsDefault.toLowerCase();
+    
+    const values = rows.map(r => r[key]).filter(v => v !== null && v !== undefined && v !== '');
+    
+    let aggValue: number | string | null = null;
+    
+    if (func === 'count') {
+      aggValue = values.length;
+    } else {
+      // For numeric operations
+      const numericValues = values.map(v => {
+        if (typeof v === 'number') return v;
+        const s = String(v).replace(/[^0-9.-]+/g, '');
+        return parseFloat(s);
+      }).filter(n => !isNaN(n));
+      
+      if (numericValues.length > 0) {
+        switch (func) {
+          case 'sum':
+            aggValue = numericValues.reduce((a, b) => a + b, 0);
+            break;
+          case 'avg':
+            aggValue = numericValues.reduce((a, b) => a + b, 0) / numericValues.length;
+            break;
+          case 'min':
+            aggValue = Math.min(...numericValues);
+            break;
+          case 'max':
+            aggValue = Math.max(...numericValues);
+            break;
+        }
+      }
+    }
+    
+    if (aggValue !== null) {
+      result[key] = aggValue;
+    }
+  });
+  
+  return result;
+};
+
 export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
   const {
     apiUrl,
     columnConfig,
     columnGroups,
+    aggFuncConfig,
     pdfExportTitle,
     pdfExportSubtitle,
     logoBase64,
@@ -690,7 +757,7 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
   const availableWidth = pageWidth - margin.left - margin.right;
   const headerFillRGB = hexToRgb(headerFill ?? '#712d3d');
   const headerColorRGB = hexToRgb(headerColor ?? '#ffffff');
-  const tableFontSize = fontSize ?? 10;
+  const tableFontSize = fontSize ?? 8;
 
   let processedRows = [...apiUrl];
   if (pivotColumn) {
@@ -710,19 +777,56 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
     const groupedRows: Record<string, unknown>[] = [];
     const uniqueSymbol = Symbol('initial');
     let lastValue: unknown = uniqueSymbol;
+    let currentGroupRows: Record<string, unknown>[] = [];
     
-    processedRows.forEach(row => {
+    processedRows.forEach((row, index) => {
       const currentValue = row[pivotColumn];
       if (currentValue !== lastValue) {
-        groupedRows.push({
-          __rowType: 'groupHeader',
-          [pivotColumn]: currentValue
-        });
+        // Process previous group
+        if (lastValue !== uniqueSymbol && currentGroupRows.length > 0) {
+          const count = currentGroupRows.length;
+          let groupHeaderRow: Record<string, unknown> = {
+            __rowType: 'groupHeader',
+            [pivotColumn]: `${String(lastValue)} - (${count})`
+          };
+
+          if (aggFuncConfig && aggFuncConfig.length > 0) {
+            const groupAggs = calculateAggregation(currentGroupRows, aggFuncConfig);
+            groupHeaderRow = { ...groupHeaderRow, ...groupAggs };
+          }
+          
+          groupedRows.push(groupHeaderRow);
+          groupedRows.push(...currentGroupRows);
+        }
+
         lastValue = currentValue;
+        currentGroupRows = [];
       }
-      groupedRows.push(row);
+      currentGroupRows.push(row);
+
+      // Process last group
+      if (index === processedRows.length - 1 && currentGroupRows.length > 0) {
+        const count = currentGroupRows.length;
+        let groupHeaderRow: Record<string, unknown> = {
+          __rowType: 'groupHeader',
+          [pivotColumn]: `${String(currentValue)} - (${count})`
+        };
+
+        if (aggFuncConfig && aggFuncConfig.length > 0) {
+          const groupAggs = calculateAggregation(currentGroupRows, aggFuncConfig);
+          groupHeaderRow = { ...groupHeaderRow, ...groupAggs };
+        }
+        
+        groupedRows.push(groupHeaderRow);
+        groupedRows.push(...currentGroupRows);
+      }
     });
     processedRows = groupedRows;
+  }
+
+  if (aggFuncConfig && aggFuncConfig.length > 0) {
+    const grandTotal = calculateAggregation(apiUrl, aggFuncConfig);
+    processedRows.push({ ...grandTotal, __rowType: 'total' });
   }
 
   const { headers, hasGroupHeaders } = generateGroupHeaders(columnDefs, printableColumns, headerFillRGB, headerColorRGB);

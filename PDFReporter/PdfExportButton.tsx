@@ -1,5 +1,5 @@
 import * as React from 'react';
-import type { ColumnConfig, ColumnGroup, ExportOptions } from './pdfExport';
+import type { ColumnConfig, ColumnGroup, ExportOptions, AggFuncConfig } from './pdfExport';
 import { exportJsonToPdf } from './pdfExport';
 
 export interface IPdfExportButtonProps {
@@ -14,6 +14,7 @@ export interface IPdfExportButtonProps {
   apiUrl?: string;
   columnConfig?: string;
   columnGroups?: string;
+  aggFuncConfig?: string;
   headerFill?: string;
   headerColor?: string;
   fontSize?: number;
@@ -99,6 +100,24 @@ const parseColumnGroups = (columnGroups: string): ColumnGroup[] => {
   return results;
 };
 
+const parseAggFuncConfig = (aggFuncConfig: string): AggFuncConfig[] => {
+  const cleaned = cleanJsonString(aggFuncConfig);
+  const parsed = JSON.parse(cleaned) as unknown;
+  if (!Array.isArray(parsed)) {
+    throw new Error('aggFuncConfig debe ser un array JSON de configuraciones de agregación.');
+  }
+  const results: AggFuncConfig[] = [];
+  parsed.forEach(item => {
+    if (isRecord(item)) {
+      const candidate = item as Partial<AggFuncConfig>;
+      if (typeof candidate.ColumnConfigName === 'string') {
+        results.push(candidate as AggFuncConfig);
+      }
+    }
+  });
+  return results;
+};
+
 export const PdfExportButton: React.FC<IPdfExportButtonProps> = (props) => {
   const [feedback, setFeedback] = React.useState<FeedbackState | undefined>(undefined);
   const [isHovered, setIsHovered] = React.useState(false);
@@ -127,10 +146,12 @@ export const PdfExportButton: React.FC<IPdfExportButtonProps> = (props) => {
         const parsedApiUrl = parseApiUrl(props.apiUrl);
         const parsedColumnConfig = parseColumnConfig(props.columnConfig);
         const parsedColumnGroups = props.columnGroups?.trim() ? parseColumnGroups(props.columnGroups) : undefined;
+        const parsedAggFuncConfig = props.aggFuncConfig?.trim() ? parseAggFuncConfig(props.aggFuncConfig) : undefined;
         const exportOptions: ExportOptions = {
           apiUrl: parsedApiUrl,
           columnConfig: parsedColumnConfig,
           columnGroups: parsedColumnGroups,
+          aggFuncConfig: parsedAggFuncConfig,
           pdfFileName: props.pdfFileName?.trim(),
           pdfExportTitle: props.pdfExportTitle?.trim(),
           pdfExportSubtitle: props.pdfExportSubtitle?.trim(),
