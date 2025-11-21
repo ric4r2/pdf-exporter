@@ -39,7 +39,7 @@
   <!-- PDF Table Styling -->
   <property name="headerFill" display-name-key="Header Fill Color" description-key="Background color for table headers (hex format)" of-type="SingleLine.Text" usage="input" required="false" default-value="#712d3d" />
   <property name="headerColor" display-name-key="Header Text Color" description-key="Text color for table headers (hex format)" of-type="SingleLine.Text" usage="input" required="false" default-value="#ffffff" />
-  <property name="fontSize" display-name-key="Font Size" description-key="Font size for table content in points" of-type="Whole.None" usage="input" required="false" default-value="10" />
+  <property name="fontSize" display-name-key="Font Size" description-key="Font size for table content in points" of-type="Whole.None" usage="input" required="false" default-value="8" />
 
   <!-- Button Styling (Normal State) -->
   <property name="fill" display-name-key="Button Fill Color" description-key="Background color of the button (hex format)" of-type="SingleLine.Text" usage="input" required="false" default-value="#712d3d" />
