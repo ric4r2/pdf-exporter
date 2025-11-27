@@ -63,6 +63,7 @@ export interface ExportOptions {
   pdfFileName?: string;
   pdfExportTitle?: string;
   pdfExportSubtitle?: string;
+  sortingGroupingInfo?: string; // Text describing sorting/grouping config
   logoBase64?: string; // Custom base64 logo
   headerFill?: string; // hex color
   headerColor?: string; // hex color
@@ -890,7 +891,15 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    doc.text(`Fecha: ${currentDate}`, margin.left, documentSubtitle ? 68 : 50);
+    const dateY = documentSubtitle ? 68 : 50;
+    doc.text(`Fecha: ${currentDate}`, margin.left, dateY);
+    
+    if (options.sortingGroupingInfo) {
+      doc.setFontSize(8);
+      doc.setTextColor(80, 80, 80);
+      doc.text(options.sortingGroupingInfo, margin.left, dateY + 12);
+      doc.setTextColor(0, 0, 0);
+    }
 
     // Footer
     doc.setDrawColor(200, 200, 200);
