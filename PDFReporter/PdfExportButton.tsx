@@ -6,6 +6,7 @@ export interface IPdfExportButtonProps {
   pdfFileName?: string;
   pdfExportTitle?: string;
   pdfExportSubtitle?: string;
+  sortingGroupingInfo?: string;
   logoBase64?: string;
   landscapeOrientation?: boolean;
   linkTextColumn?: string;
@@ -155,6 +156,7 @@ export const PdfExportButton: React.FC<IPdfExportButtonProps> = (props) => {
           pdfFileName: props.pdfFileName?.trim(),
           pdfExportTitle: props.pdfExportTitle?.trim(),
           pdfExportSubtitle: props.pdfExportSubtitle?.trim(),
+          sortingGroupingInfo: props.sortingGroupingInfo?.trim(),
           logoBase64: props.logoBase64?.trim(),
           landscapeOrientation: props.landscapeOrientation,
           linkTextColumn: props.linkTextColumn?.trim(),
