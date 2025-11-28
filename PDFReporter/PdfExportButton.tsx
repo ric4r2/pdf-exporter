@@ -41,11 +41,9 @@ interface FeedbackState {
 
 const cleanJsonString = (raw: string): string => {
   let cleaned = raw.trim();
-  // Only remove outer quotes if the JSON is wrapped in extra quotes from Power Apps
   if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith('\'') && cleaned.endsWith('\''))) {
     cleaned = cleaned.slice(1, -1);
   }
-  // Don't process escape sequences - JSON.parse will handle them correctly
   return cleaned;
 };
 
@@ -127,7 +125,6 @@ export const PdfExportButton: React.FC<IPdfExportButtonProps> = (props) => {
   const lastClickTime = React.useRef<number>(0);
 
   const handleExport = React.useCallback((): void => {
-    // Debounce: prevent multiple clicks within 2 seconds
     const now = Date.now();
     if (now - lastClickTime.current < 2000 || isGenerating) {
       return;
@@ -135,7 +132,6 @@ export const PdfExportButton: React.FC<IPdfExportButtonProps> = (props) => {
     lastClickTime.current = now;
     setIsGenerating(true);
     
-    // Use setTimeout to allow UI to update before heavy processing
     setTimeout(() => {
       try {
         if (!props.apiUrl?.trim()) {
@@ -168,7 +164,6 @@ export const PdfExportButton: React.FC<IPdfExportButtonProps> = (props) => {
         };
         const doc = exportJsonToPdf(exportOptions);
         const fileName = (props.pdfFileName?.trim() ?? 'grid-export') + '.pdf';
-        // Try to open preview in new window - may fail with large PDFs
         try {
           const blobUrl = doc.output('bloburl') as string;
           window.open(blobUrl, '_blank');
@@ -176,7 +171,6 @@ export const PdfExportButton: React.FC<IPdfExportButtonProps> = (props) => {
           console.warn('Preview in new window failed (possibly due to large file size):', previewError);
         }
         doc.save(fileName);
-        // Reset after successful generation
         setTimeout(() => setIsGenerating(false), 500);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
