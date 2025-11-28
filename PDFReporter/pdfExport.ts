@@ -56,22 +56,22 @@ export interface AggFuncConfig {
 }
 
 export interface ExportOptions {
-  apiUrl: Record<string, unknown>[]; // Array of row data
-  columnConfig: ColumnConfig[]; // Column configuration
-  columnGroups?: ColumnGroup[]; // Optional grouped columns
-  aggFuncConfig?: AggFuncConfig[]; // Aggregation configuration
+  apiUrl: Record<string, unknown>[];
+  columnConfig: ColumnConfig[];
+  columnGroups?: ColumnGroup[];
+  aggFuncConfig?: AggFuncConfig[];
   pdfFileName?: string;
   pdfExportTitle?: string;
   pdfExportSubtitle?: string;
-  sortingGroupingInfo?: string; // Text describing sorting/grouping config
-  logoBase64?: string; // Custom base64 logo
-  headerFill?: string; // hex color
-  headerColor?: string; // hex color
+  sortingGroupingInfo?: string;
+  logoBase64?: string;
+  headerFill?: string;
+  headerColor?: string;
   fontSize?: number;
-  landscapeOrientation?: boolean; // true for landscape, false for portrait
-  linkTextColumn?: string; // Column name whose text will be clickable
-  linkUrlColumn?: string; // Column name containing URLs (not printed)
-  pivotColumn?: string; // Column name to group rows by
+  landscapeOrientation?: boolean;
+  linkTextColumn?: string;
+  linkUrlColumn?: string;
+  pivotColumn?: string;
 }
 
 interface PrintableColumn {
@@ -321,7 +321,6 @@ const generateGroupHeaders = (
     };
   }
 
-  // Use provided colors or defaults
   const fillColor = headerFillRGB ?? [113, 45, 61];
   const textColor = headerColorRGB ?? [255, 255, 255];
   const groupPathCache = new Map<string, string | undefined>();
@@ -556,7 +555,6 @@ const buildBodyRows = (
   const body: RowInput[] = [];
   const linkData: LinkData[] = [];
 
-  // Find the column index for the link text column
   const linkTextColIndex = linkTextColumn
     ? printableColumns.findIndex(col => col.dataKey === linkTextColumn)
     : -1;
@@ -571,13 +569,8 @@ const buildBodyRows = (
       if (rowType === 'groupHeader') {
         if (pivotColumn) {
           if (column.dataKey === pivotColumn) {
-            // For the pivot column, we expect the value to be already formatted as "Value - (Count)"
-            // or we format it here if it's just the value.
-            // But our new logic will put the formatted string in the row data.
-            // We use String() to ensure we don't try to number-format the "Value - (Count)" string.
             return String(rawRow[pivotColumn]);
           }
-          // For other columns, if there is an aggregation value, format and return it.
           const val = rawRow[column.dataKey];
           if (val !== undefined && val !== null) {
              return formatValue(val, column.columnConfig);
@@ -674,7 +667,6 @@ const calculateAggregation = (rows: Record<string, unknown>[], config: AggFuncCo
     if (func === 'count') {
       aggValue = values.length;
     } else {
-      // For numeric operations
       const numericValues = values.map(v => {
         if (typeof v === 'number') return v;
         const s = String(v).replace(/[^0-9.-]+/g, '');
@@ -783,7 +775,6 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
     processedRows.forEach((row, index) => {
       const currentValue = row[pivotColumn];
       if (currentValue !== lastValue) {
-        // Process previous group
         if (lastValue !== uniqueSymbol && currentGroupRows.length > 0) {
           const count = currentGroupRows.length;
           let groupHeaderRow: Record<string, unknown> = {
@@ -805,7 +796,6 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
       }
       currentGroupRows.push(row);
 
-      // Process last group
       if (index === processedRows.length - 1 && currentGroupRows.length > 0) {
         const count = currentGroupRows.length;
         let groupHeaderRow: Record<string, unknown> = {
@@ -901,7 +891,6 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
       doc.setTextColor(0, 0, 0);
     }
 
-    // Footer
     doc.setDrawColor(200, 200, 200);
     doc.line(margin.left, pageHeight - margin.bottom + 15, pageWidth - margin.right, pageHeight - margin.bottom + 15);
 
@@ -922,7 +911,6 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
     const cellData = data as any;
-
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const columnIndex = cellData.column?.index as number | undefined ?? -1;
 
@@ -948,7 +936,7 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
     const cellHeight = cellData.cell.height as number | undefined;
 
     if (cellX !== undefined && cellY !== undefined && cellWidth !== undefined && cellHeight !== undefined) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
       (doc as any).link(cellX, cellY, cellWidth, cellHeight, { url: linkInfo.url });
     }
   };

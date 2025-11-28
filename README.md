@@ -1,53 +1,314 @@
-# PDF Exporter PCF Control
+# PCF Component - PDF Exporter
 
-A Power Apps Component Framework (PCF) control that generates PDF reports from JSON table data with customizable styling and formatting.
+## Propiedades del Componente
 
-## Features
+### Configuración del Archivo PDF
 
-- Export JSON data to formatted PDF documents
-- Support for column configurations (formatting, widths, visibility)
-- Data type formatting (numbers, currency, dates, percentages)
-- Grouped column headers
-- Summary/total rows with special styling
-- Clickable links in PDF cells
-- Custom logos, titles, and subtitles
-- Customizable button appearance with hover/pressed states
-- Portrait or landscape orientation
-- Opens in new tab with automatic download
+#### PDF File Name
+- **Tipo:** Texto
+- **Descripción:** Nombre del archivo PDF generado (sin extensión)
+- **Valor por defecto:** `grid-export`
+- **Ejemplo:** `"Reporte_Ventas"`
 
-## Build
+#### PDF Export Title
+- **Tipo:** Texto
+- **Descripción:** Título principal que aparecerá en el encabezado del PDF
+- **Valor por defecto:** `Grid Export`
+- **Ejemplo:** `"Reporte de Ventas Mensual"`
 
-```bash
-npm install
-npm run build
+#### PDF Export Subtitle
+- **Tipo:** Texto
+- **Descripción:** Subtítulo que aparecerá debajo del título principal
+- **Opcional:** Sí
+- **Ejemplo:** `"Departamento de Ventas - Región Norte"`
+
+#### Sorting/Grouping Info
+- **Tipo:** Texto
+- **Descripción:** Texto descriptivo sobre el ordenamiento y agrupación aplicados. Se muestra debajo de la fecha en el PDF
+- **Opcional:** Sí
+- **Ejemplo:** `"Agrupado por: Región | Ordenado por: Fecha descendente"`
+
+#### Logo Base64
+- **Tipo:** Texto (Base64)
+- **Descripción:** Logo que se insertará en el PDF. Debe ser una imagen codificada en Base64
+- **Opcional:** Sí (usa logo por defecto si no se proporciona)
+- **Ejemplo:** `"iVBORw0KGgoAAAANSUhEUgAA..."`
+
+#### Landscape Orientation
+- **Tipo:** Switch (Booleano)
+- **Descripción:** Define la orientación del documento
+  - **ON (true):** Formato horizontal (landscape)
+  - **OFF (false):** Formato vertical (portrait)
+- **Valor por defecto:** `true`
+
+### Configuración de Enlaces
+
+#### Link Text Column
+- **Tipo:** Texto
+- **Descripción:** Nombre de la columna cuyo texto se convertirá en enlaces clicables
+- **Opcional:** Sí
+- **Ejemplo:** `"NombreProducto"`
+
+#### Link URL Column
+- **Tipo:** Texto
+- **Descripción:** Nombre de la columna que contiene las URLs para los enlaces (esta columna no se imprime)
+- **Opcional:** Sí
+- **Ejemplo:** `"URLProducto"`
+
+### Configuración de Agrupación
+
+#### Pivot Column
+- **Tipo:** Texto
+- **Descripción:** Nombre de la columna por la cual se agruparán las filas. Todas las filas con el mismo valor en esta columna se agruparán juntas
+- **Opcional:** Sí
+- **Ejemplo:** `"Region"` o `"Categoria"`
+
+### Configuración de Datos
+
+#### API URL (JSON)
+- **Tipo:** JSON (Multiple)
+- **Descripción:** Datos de la tabla en formato JSON. Cada objeto representa una fila
+- **Formato:** Array de objetos con pares `nombreColumna: valor`
+- **Obligatorio:** Sí
+- **Ejemplo:**
+```json
+[
+  {
+    "Nombre": "Producto A",
+    "Precio": 100,
+    "Categoria": "Electrónica"
+  },
+  {
+    "Nombre": "Producto B",
+    "Precio": 200,
+    "Categoria": "Hogar"
+  }
+]
 ```
 
-## Properties
+#### Column Config (JSON)
+- **Tipo:** JSON (Multiple)
+- **Descripción:** Configuración de columnas. Similar al formato de AG-Grid, con propiedades adicionales para impresión
+- **Obligatorio:** Sí
+- **Propiedades principales:**
+  - `NombreColumna`: Nombre identificador de la columna (obligatorio)
+  - `NombreMostrar`: Texto que se mostrará en el encabezado (opcional)
+  - `TipoColumna`: Tipo de dato (`text`, `number`, `date`, `datetime`, etc.)
+  - `PropiedadesColumna`: Objeto con propiedades adicionales
+    - `Formato`: Formato de visualización (`currency`, `percentage`, etc.)
+    - `DecimalesdeRedondeo`: Número de decimales para números
+    - `ColorDefondo`: Color de fondo de la celda (hex)
+    - `ColorDeLetra`: Color del texto (hex)
+    - `TamanoDeLetra`: Tamaño de letra
+  - `Print`: **Configuración de impresión (importante)**
+    - `Printable`: (boolean) Si es `true`, la columna se incluye en el PDF
+    - `WidthPercentage`: (string) Porcentaje del ancho de la tabla que ocupará la columna
 
-### PDF File Related
-- `pdfFileName` (Text): Name of the PDF file without extension (default: "grid-export")
-- `pdfExportTitle` (Text): Title in PDF header (default: "Grid Export")
-- `pdfExportSubtitle` (Text): Subtitle below the title
-- `logoBase64` (Multiple): Base64 encoded logo image (uses default if empty)
-- `landscapeOrientation` (Yes/No): True for landscape, false for portrait (default: true)
-- `linkTextColumn` (Text): Column name whose text will be clickable links
-- `linkUrlColumn` (Text): Column name containing URLs (not printed in PDF)
+**Ejemplo:**
+```json
+[
+  {
+    "NombreColumna": "nombre",
+    "NombreMostrar": "Nombre del Producto",
+    "TipoColumna": "text",
+    "Print": {
+      "Printable": true,
+      "WidthPercentage": "30"
+    }
+  },
+  {
+    "NombreColumna": "precio",
+    "NombreMostrar": "Precio",
+    "TipoColumna": "number",
+    "PropiedadesColumna": {
+      "Formato": "currency",
+      "DecimalesdeRedondeo": 2
+    },
+    "Print": {
+      "Printable": true,
+      "WidthPercentage": "15"
+    }
+  },
+  {
+    "NombreColumna": "id_interno",
+    "TipoColumna": "number",
+    "Print": {
+      "Printable": false
+    }
+  }
+]
+```
 
-### Data Sources (Required)
-- `apiUrl` (Multiple/JSON): Array of row data objects
-- `columnConfig` (Multiple/JSON): Array of column configurations
-- `columnGroups` (Multiple/JSON): Optional grouped columns structure
+#### Column Groups (JSON)
+- **Tipo:** JSON (Multiple)
+- **Descripción:** Agrupación de columnas bajo encabezados comunes. Utiliza el mismo formato que AG-Grid
+- **Opcional:** Sí
+- **Propiedades:**
+  - `headerName`: Nombre del grupo de columnas
+  - `children`: Array con los nombres de las columnas que pertenecen al grupo
+  - `marryChildren`: (opcional) Si es true, mantiene las columnas juntas
 
-### PDF Table Styling
-- `headerFill` (Text): Header background color hex (default: "#712d3d")
-- `headerColor` (Text): Header text color hex (default: "#ffffff")
-- `fontSize` (Number): Font size in points (default: 10)
+**Ejemplo:**
+```json
+[
+  {
+    "headerName": "Información del Producto",
+    "children": ["codigo", "nombre", "descripcion"],
+    "marryChildren": true
+  },
+  {
+    "headerName": "Datos Financieros",
+    "children": ["precio", "costo", "margen"],
+    "marryChildren": true
+  }
+]
+```
 
-### Button Styling
-- `fill`, `color`, `borderColor`: Normal state colors
-- `hoverFill`, `hoverColor`, `hoverBorderColor`: Hover state colors
-- `pressedFill`, `pressedColor`, `pressedBorderColor`: Pressed state colors
-- `borderThickness`, `borderRadius`, `buttonFontSize`, `buttonFontWeight`: Button dimensions
+#### Aggregation Function Config (JSON)
+- **Tipo:** JSON (Multiple)
+- **Descripción:** Configuración de funciones de agregación para columnas agrupadas. Compatible con AG-Grid
+- **Opcional:** Sí
+- **Propiedades:**
+  - `ColumnConfigName`: Nombre de la columna a la que se aplica la agregación (obligatorio)
+  - `aggFuncColumnsAllowed`: (boolean) Si se permiten funciones de agregación en esta columna
+  - `aggFuncColumnsDefault`: (string) Función de agregación por defecto a aplicar
+  - `RowGroupColumnsDefault`: (boolean) Si la columna se agrupa por filas
+  - `GroupColumnsDefault`: (boolean) Si la columna se agrupa
+
+**Funciones de agregación disponibles:**
+- `sum`: Suma de valores numéricos
+- `avg`: Promedio de valores
+- `min`: Valor mínimo
+- `max`: Valor máximo
+- `count`: Conteo de elementos
+- `first`: Primer valor del grupo
+- `last`: Último valor del grupo
+
+**Ejemplo:**
+```json
+[
+  {
+    "ColumnConfigName": "precio",
+    "aggFuncColumnsAllowed": true,
+    "aggFuncColumnsDefault": "sum",
+    "RowGroupColumnsDefault": false
+  },
+  {
+    "ColumnConfigName": "cantidad",
+    "aggFuncColumnsAllowed": true,
+    "aggFuncColumnsDefault": "avg"
+  },
+  {
+    "ColumnConfigName": "ventaMaxima",
+    "aggFuncColumnsAllowed": true,
+    "aggFuncColumnsDefault": "max"
+  }
+]
+```
+
+### Estilo de la Tabla
+
+#### Header Fill Color
+- **Tipo:** Texto (Hexadecimal)
+- **Descripción:** Color de fondo de los encabezados de la tabla
+- **Valor por defecto:** `#712d3d`
+- **Ejemplo:** `"#0078D4"`, `"#FF5733"`
+
+#### Header Text Color
+- **Tipo:** Texto (Hexadecimal)
+- **Descripción:** Color del texto en los encabezados de la tabla
+- **Valor por defecto:** `#ffffff`
+- **Ejemplo:** `"#FFFFFF"`, `"#000000"`
+
+#### Font Size
+- **Tipo:** Número
+- **Descripción:** Tamaño del texto del contenido de la tabla (en puntos)
+- **Valor por defecto:** `8`
+- **Ejemplo:** `10`, `12`
+
+### Estilo del Botón - Estado Normal
+
+#### Button Fill Color
+- **Tipo:** Texto (Hexadecimal)
+- **Descripción:** Color de relleno del botón en estado normal
+- **Valor por defecto:** `#712d3d`
+- **Ejemplo:** `"#0078D4"`
+
+#### Button Text Color
+- **Tipo:** Texto (Hexadecimal)
+- **Descripción:** Color del texto dentro del botón
+- **Valor por defecto:** `#ffffff`
+- **Ejemplo:** `"#FFFFFF"`
+
+#### Button Border Color
+- **Tipo:** Texto (Hexadecimal)
+- **Descripción:** Color del borde del botón
+- **Valor por defecto:** `#712d3d`
+- **Ejemplo:** `"#0078D4"`
+
+#### Button Border Thickness
+- **Tipo:** Número
+- **Descripción:** Grosor del borde del botón (en píxeles)
+- **Valor por defecto:** `1`
+- **Ejemplo:** `2`, `3`
+
+#### Button Border Radius
+- **Tipo:** Número
+- **Descripción:** Radio del borde del botón (esquinas redondeadas, en píxeles)
+- **Valor por defecto:** `6`
+- **Ejemplo:** `4`, `10`
+
+#### Button Font Size
+- **Tipo:** Número
+- **Descripción:** Tamaño del texto dentro del botón (en píxeles)
+- **Valor por defecto:** `14`
+- **Ejemplo:** `12`, `16`
+
+#### Button Font Weight
+- **Tipo:** Número
+- **Descripción:** Grosor del texto dentro del botón (100-900)
+- **Valor por defecto:** `600`
+- **Ejemplo:** `400` (normal), `700` (negrita), `900` (extra negrita)
+
+### Estilo del Botón - Estado Hover
+
+#### Button Hover Fill
+- **Tipo:** Texto (Hexadecimal)
+- **Descripción:** Color de relleno del botón cuando el puntero está sobre él
+- **Opcional:** Sí (usa el color normal si no se especifica)
+- **Ejemplo:** `"#005A9E"`
+
+#### Button Hover Text Color
+- **Tipo:** Texto (Hexadecimal)
+- **Descripción:** Color del texto cuando el puntero está sobre el botón
+- **Opcional:** Sí
+- **Ejemplo:** `"#FFFFFF"`
+
+#### Button Hover Border Color
+- **Tipo:** Texto (Hexadecimal)
+- **Descripción:** Color del borde cuando el puntero está sobre el botón
+- **Opcional:** Sí
+- **Ejemplo:** `"#005A9E"`
+
+### Estilo del Botón - Estado Pressed
+
+#### Button Pressed Fill
+- **Tipo:** Texto (Hexadecimal)
+- **Descripción:** Color de relleno del botón cuando es presionado
+- **Opcional:** Sí
+- **Ejemplo:** `"#004578"`
+
+#### Button Pressed Text Color
+- **Tipo:** Texto (Hexadecimal)
+- **Descripción:** Color del texto cuando el botón es presionado
+- **Opcional:** Sí
+- **Ejemplo:** `"#FFFFFF"`
+
+#### Button Pressed Border Color
+- **Tipo:** Texto (Hexadecimal)
+- **Descripción:** Color del borde cuando el botón es presionado
+- **Opcional:** Sí
+- **Ejemplo:** `"#004578"`
 
 ## JSON Data Format
 
@@ -121,52 +382,198 @@ Array defining grouped headers:
 ]
 ```
 
-## Clickable Links
+## Notas Importantes
 
-To add clickable links in PDF cells:
+### Sobre los Colores
+- Todos los colores deben estar en formato hexadecimal con el símbolo `#`
+- Ejemplo válido: `#FF5733`
+- Ejemplo inválido: `FF5733` o `rgb(255, 87, 51)`
 
-1. Set `linkTextColumn` to the column containing display text
-2. Set `linkUrlColumn` to the column containing URLs
-3. The URL column will not be printed in the PDF
-4. Links appear in blue and are clickable in the PDF
+### Sobre los JSON
+- Asegúrate de que todos los JSON estén correctamente formateados
+- Los nombres de propiedades deben estar entre comillas dobles
+- Los valores de texto también deben estar entre comillas dobles
+- Power Apps puede requerir escapar las comillas: usar `""` en lugar de `"` dentro de strings
 
-**Example:**
-- Column "DocumentName" has text: "View Report"
-- Column "DocumentURL" has: "https://example.com/report.pdf"
-- Set `linkTextColumn` = "DocumentName"
-- Set `linkUrlColumn` = "DocumentURL"
-- PDF shows "View Report" in blue as a clickable link
+### Sobre las Columnas
+- Si una columna tiene `Print.Printable: false`, no aparecerá en el PDF
+- La suma de los `WidthPercentage` de todas las columnas visibles debería ser aproximadamente 100%
 
-**Note:** PDF links open in the same tab. This is standard PDF behavior and controlled by the PDF viewer, not the document.
+### Sobre los Enlaces
+- Para que funcionen los enlaces, debes especificar tanto `Link Text Column` como `Link URL Column`
+- La columna de URL no se imprimirá en el PDF, solo se usa para los enlaces
+- Los enlaces son clicables en el PDF generado y aparecen en color azul
 
-## Row Types
+**Ejemplo de Enlaces:**
+- Columna "NombreDocumento" tiene el texto: "Ver Reporte"
+- Columna "URLDocumento" tiene: "https://ejemplo.com/reporte.pdf"
+- Configurar `linkTextColumn` = "NombreDocumento"
+- Configurar `linkUrlColumn` = "URLDocumento"
+- El PDF mostrará "Ver Reporte" en azul como enlace clicable
 
-Mark special rows using `__rowType` property:
-- `data` or `default`: Normal row
-- `groupHeader` or `group`: Group header
-- `groupTotal` or `subtotal`: Subtotal row
-- `total` or `grandtotal`: Grand total row
+### Sobre la Agrupación
+- La agrupación con `Pivot Column` agrupa filas consecutivas con el mismo valor
+- Las funciones de agregación se aplican a grupos si se especifica `Aggregation Function Config`
 
-## Deployment
+## Tipos de Fila Especiales
 
-After building, the control is available in the `out` directory:
+Marca filas especiales usando la propiedad `__rowType`:
+- `data` o `default`: Fila normal
+- `groupHeader` o `group`: Encabezado de grupo
+- `groupTotal` o `subtotal`: Fila de subtotal
+- `total` o `grandtotal`: Fila de total general
 
-1. Create a solution in Power Apps
-2. Add the PCF control to your solution
-3. Publish to your environment
+Estas filas reciben estilos especiales automáticamente (negritas, colores de fondo, etc.)
 
-## Technical Notes
+## Ejemplo Completo de Configuración
 
-- Default PDF format: Letter size (11" x 8.5")
-- Default margins: Top 100pt, Left/Right 30pt, Bottom 50pt
-- Tables auto-handle text wrapping, column width distribution, row striping, and page breaks
-- Headers repeat on each page
-- Current date displayed automatically
+### Column Config
+```json
+[
+  {
+    "NombreColumna": "codigo",
+    "NombreMostrar": "Código",
+    "TipoColumna": "text",
+    "Print": {
+      "Printable": true,
+      "WidthPercentage": "10"
+    }
+  },
+  {
+    "NombreColumna": "producto",
+    "NombreMostrar": "Producto",
+    "TipoColumna": "text",
+    "Print": {
+      "Printable": true,
+      "WidthPercentage": "30"
+    }
+  },
+  {
+    "NombreColumna": "categoria",
+    "NombreMostrar": "Categoría",
+    "TipoColumna": "text",
+    "Print": {
+      "Printable": true,
+      "WidthPercentage": "20"
+    }
+  },
+  {
+    "NombreColumna": "precio",
+    "NombreMostrar": "Precio",
+    "TipoColumna": "number",
+    "PropiedadesColumna": {
+      "Formato": "currency",
+      "DecimalesdeRedondeo": 2
+    },
+    "Print": {
+      "Printable": true,
+      "WidthPercentage": "15"
+    }
+  },
+  {
+    "NombreColumna": "cantidad",
+    "NombreMostrar": "Cantidad",
+    "TipoColumna": "number",
+    "Print": {
+      "Printable": true,
+      "WidthPercentage": "10"
+    }
+  },
+  {
+    "NombreColumna": "total",
+    "NombreMostrar": "Total",
+    "TipoColumna": "number",
+    "PropiedadesColumna": {
+      "Formato": "currency",
+      "DecimalesdeRedondeo": 2
+    },
+    "Print": {
+      "Printable": true,
+      "WidthPercentage": "15"
+    }
+  }
+]
+```
 
-## Dependencies
+### API URL (Datos)
+```json
+[
+  {
+    "codigo": "P001",
+    "producto": "Laptop Dell XPS 15",
+    "categoria": "Electrónica",
+    "precio": 15000,
+    "cantidad": 5,
+    "total": 75000
+  },
+  {
+    "codigo": "P002",
+    "producto": "Mouse Logitech MX Master",
+    "categoria": "Accesorios",
+    "precio": 1200,
+    "cantidad": 10,
+    "total": 12000
+  },
+  {
+    "codigo": "P003",
+    "producto": "Teclado Mecánico",
+    "categoria": "Accesorios",
+    "precio": 2500,
+    "cantidad": 8,
+    "total": 20000
+  }
+]
+```
 
-- React 16.14.0
-- jsPDF 2.5.1
-- jspdf-autotable 3.5.31
-- TypeScript 5.8.3
-- FluentUI 8.29.0
+### Column Groups
+```json
+[
+  {
+    "headerName": "Información del Producto",
+    "children": ["codigo", "producto", "categoria"]
+  },
+  {
+    "headerName": "Datos Financieros",
+    "children": ["precio", "cantidad", "total"]
+  }
+]
+```
+
+### Aggregation Function Config
+```json
+[
+  {
+    "ColumnConfigName": "cantidad",
+    "aggFuncColumnsAllowed": true,
+    "aggFuncColumnsDefault": "sum"
+  },
+  {
+    "ColumnConfigName": "total",
+    "aggFuncColumnsAllowed": true,
+    "aggFuncColumnsDefault": "sum"
+  }
+]
+```
+
+## Tipos de Columna Soportados
+
+- `text`: Texto simple
+- `number`: Números
+- `date`: Fechas (formato dd/mm/yyyy)
+- `datetime`: Fecha y hora
+- `currency`: Moneda (con formato de pesos mexicanos)
+- `percentage`: Porcentaje
+
+## Formatos Disponibles
+
+En `PropiedadesColumna.Formato`:
+- `currency`: Formato de moneda ($X,XXX.XX)
+- `percentage`: Formato de porcentaje (XX.XX%)
+- `date`: Formato de fecha corta
+- `datetime`: Formato de fecha y hora
+- `number`: Formato numérico estándar
+
+
+## Versión
+
+1.2.1
