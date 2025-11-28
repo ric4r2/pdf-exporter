@@ -423,6 +423,7 @@ const formatValue = (value: unknown, columnConfig?: ColumnConfig): string => {
       return JSON.stringify(val);
     }
     const str = String(val);
+    // eslint-disable-next-line no-control-regex
     return str.replace(/[\u0000-\u001F\u007F-\u009F]/g, '').trim();
   };
 
@@ -637,6 +638,7 @@ const applyRowStyling = (
     data.cell.styles.fontStyle = 'bold';
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
   const columnIndex = (data as any).column?.index as number | undefined;
   if (columnIndex !== undefined) {
     const hasLink = linkData.some(
@@ -907,7 +909,9 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
       return;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
     const cellData = data as any;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const columnIndex = cellData.column?.index as number | undefined ?? -1;
 
     if (columnIndex === -1) {
@@ -922,12 +926,17 @@ export const exportJsonToPdf = (options: ExportOptions): JsPDFInstance => {
       return;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const cellX = cellData.cell.x as number | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const cellY = cellData.cell.y as number | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const cellWidth = cellData.cell.width as number | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const cellHeight = cellData.cell.height as number | undefined;
 
     if (cellX !== undefined && cellY !== undefined && cellWidth !== undefined && cellHeight !== undefined) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
       (doc as any).link(cellX, cellY, cellWidth, cellHeight, { url: linkInfo.url });
     }
   };

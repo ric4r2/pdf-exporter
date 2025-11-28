@@ -5,7 +5,9 @@ import * as React from "react";
 export class PDFReporter implements ComponentFramework.ReactControl<IInputs, IOutputs> {
     private notifyOutputChanged: () => void;
 
-    constructor() {}
+    constructor() {
+        // Empty
+    }
 
     /**
      * Used to initialize the control instance. Controls can kick off remote server calls and other initialization actions here.
@@ -76,5 +78,7 @@ export class PDFReporter implements ComponentFramework.ReactControl<IInputs, IOu
         return { };
     }
 
-    public destroy(): void {}
+    public destroy(): void {
+        // Cleanup
+    }
 }
